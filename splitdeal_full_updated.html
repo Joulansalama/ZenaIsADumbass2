@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>SplitDeal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Outfit', 'sans-serif'] },
+      colors: {
+        primary: '#0071E3',
+        'primary-dark': '#0059b3',
+        bg: '#F2F5F8',
+        card: '#ffffff',
+        muted: '#6B7280',
+        border: '#E5E9EF',
+      },
+      borderRadius: { '2xl': '1rem', '3xl': '1.5rem', '4xl': '2rem' }
+    }
+  }
+}
+</script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Outfit', sans-serif; background: #F2F5F8; color: #111827;
+   -webkit-font-smoothing: antialiased; }
+  ::-webkit-scrollbar { display: none; }
+  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+  .chat-bubble-me { background: #0071E3; color: #fff; border-radius: 1.25rem 1.25rem 0.25rem 1.25rem; }
+  .chat-bubble-other { background: #fff; color: #111827; border: 1px solid #E5E9EF; border-radius: 1.25rem 1.25rem 1.25rem 0.25rem; }
+  .chat-bubble-system { background: rgba(0,0,0,0.06); color: #6B7280; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .progress-bar { height: 8px; background: #E5E9EF; border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 999px; transition: width 0.8s ease; }
+  .bottom-nav { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.4); }
+  .card { background: #fff; border: 1px solid #E5E9EF; border-radius: 1.5rem; overflow: hidden; }
+  .badge-waiting { background: rgba(255,255,255,0.92); color: #374151; border: 1px solid rgba(0,0,0,0.08); }
+  .badge-ready { background: #dcfce7; color: #15803d; border: 1px solid rgba(21,128,61,0.15); }
+  .badge-completed { background: #eff6ff; color: #1d4ed8; }
+  .badge-verified { background: #eff6ff; color: #1d4ed8; font-size: 9px; padding: 1px 5px; border-radius: 4px; }
+  .btn-primary { background: #0071E3; color: #fff; border-radius: 0.875rem; font-weight: 700; transition: all 0.15s; }
+  .btn-primary:hover { background: #0059b3; }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-outline { background: #fff; color: #374151; border: 1.5px solid #E5E9EF; border-radius: 0.875rem; font-weight: 700; transition: all 0.15s; }
+  .btn-outline:hover { background: #F9FAFB; }
+  .btn-outline:active { transform: scale(0.97); }
+  .pin { width: 44px; height: 44px; background: #0071E3; color: #fff; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 11px; border: 3px solid #fff; box-shadow: 0 4px 16px rgba(0,113,227,0.35); cursor: pointer; transition: transform 0.15s; position: relative; z-index: 2; }
+  .pin:hover { transform: scale(1.1); }
+  .pin-pulse { position: absolute; inset: -8px; border-radius: 999px; background: rgba(0,113,227,0.18); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.15)} }
+  .category-chip { padding: 8px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .category-chip-active { background: #111827; color: #fff; }
+  .category-chip-inactive { background: #F3F4F6; color: #374151; }
+  .category-chip-inactive:hover { background: #E5E7EB; }
+  .interest-chip { padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.15s; border: 1.5px solid #E5E9EF; }
+  .interest-chip-active { background: #111827; color: #fff; border-color: transparent; transform: scale(1.04); }
+  .interest-chip-inactive { background: transparent; color: #6B7280; }
+  .notif-unread { background: #fff; border: 1.5px solid rgba(0,113,227,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .notif-read { background: transparent; border: 1px solid transparent; opacity: 0.65; }
+  .header-blur { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); background: rgba(242,245,248,0.88); border-bottom: 1px solid #E5E9EF; }
+  .animate-in { animation: slideUp 0.35s ease both; }
+  @keyframes slideUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+  input, textarea, select { font-family: 'Outfit', sans-serif; }
+  .map-bg { background: #e8e0d0; }
+  .map-grid { background-image: linear-gradient(to right,rgba(0,0,0,0.07) 1px,transparent 1px),linear-gradient(to bottom,rgba(0,0,0,0.07) 1px,transparent 1px); background-size: 40px 40px; }
+  .skeleton { background: linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 0.5rem; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .avatar-stack { display: flex; }
+  .avatar-stack .av { width: 28px; height: 28px; border-radius: 999px; border: 2px solid #fff; margin-left: -8px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; background: #E5E9EF; color: #374151; }
+  .avatar-stack .av:first-child { margin-left: 0; }
+  .bell-with-stripe { position: relative; display: inline-flex; }
+  .bell-with-stripe::after { 
+    content: '';
+    position: absolute;
+    left: -2px;
+    top: 2px;
+    width: 110%;
+    height: 2px;
+    background: currentColor;
+    transform: rotate(-45deg);
+    border-radius: 999px;
+    opacity: 0.95;
+    pointer-events: none;
+  }
+  /* Professional additions */
+  .glow-card { transition: all 0.3s ease; }
+  .glow-card:hover { box-shadow: 0 8px 32px rgba(0,113,227,0.12); transform: translateY(-2px); }
+  .hot-badge { background: linear-gradient(135deg, #ef4444, #f97316); color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 10px; font-weight: 900; display: inline-flex; align-items: center; gap: 3px; }
+  .trust-stars { display: flex; gap: 3px; }
+  .trust-stars .star { font-size: 16px; }
+  .pool-card { border-left: 3px solid #0071E3; }
+  .match-score-ring { width: 48px; height: 48px; border-radius: 999px; border: 3px solid #0071E3; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; color: #0071E3; flex-shrink: 0; }
+  .savings-tag { background: #dcfce7; color: #15803d; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+  .deal-explain { background: rgba(0,113,227,0.05); border-radius: 10px; padding: 8px 12px; font-size: 12px; color: #6B7280; font-weight: 600; line-height: 1.5; }
+  .pfp-button { width: 40px; height: 40px; border-radius: 999px; border: 2px solid #fff; overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; color: #0071E3; background: rgba(0,113,227,0.1); flex-shrink: 0; cursor: pointer; box-shadow: 0 2px 8px rgba(0,113,227,0.15); }
+  .pfp-button img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+  .pulse-dot { width: 8px; height: 8px; border-radius: 999px; animation: pulseDot 2s infinite; }
+  @keyframes pulseDot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .pool-progress { height: 6px; background: #E5E9EF; border-radius: 999px; overflow: hidden; }
+  .pool-progress-fill { height: 100%; border-radius: 999px; transition: width 0.6s ease; }
+  .tab-active { color: #0071E3; font-weight: 800; }
+  .tab-inactive { color: #9CA3AF; font-weight: 600; }
+  .quick-chip { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; background: #F3F4F6; border: 1px solid #E5E9EF; color: #374151; transition: all 0.15s; }
+  .quick-chip:hover { background: #E5E7EB; }
+  .trust-badge-high { background: #dcfce7; color: #15803d; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 999px; }
+  .trust-badge-mid { background: #fef3c7; color: #d97706; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 999px; }
+
+  .qr-code-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .qr-code-content { background: #fff; padding: 24px; border-radius: 16px; text-align: center; }
+
+  /* Smooth transitions and animations */
+  .progress-fill { height: 100%; border-radius: 999px; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+  .btn-primary { background: #0071E3; color: #fff; border-radius: 0.875rem; font-weight: 700; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+  .btn-primary:hover { background: #0059b3; transform: translateY(-1px); }
+  .btn-primary:active { transform: scale(0.96); }
+  .btn-outline { background: #fff; color: #374151; border: 1.5px solid #E5E9EF; border-radius: 0.875rem; font-weight: 700; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+  .btn-outline:hover { background: #F9FAFB; transform: translateY(-1px); }
+  .btn-outline:active { transform: scale(0.96); }
+  .pin { width: 44px; height: 44px; background: #0071E3; color: #fff; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 11px; border: 3px solid #fff; box-shadow: 0 4px 16px rgba(0,113,227,0.35); cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; z-index: 2; }
+  .pin:hover { transform: scale(1.15); }
+  .category-chip { padding: 8px 20px; border-radius: 999px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; }
+  .category-chip-active { background: #111827; color: #fff; transform: scale(1.05); }
+  .glow-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+  .glow-card:hover { box-shadow: 0 12px 40px rgba(0,113,227,0.15); transform: translateY(-4px); }
+  .pfp-button { width: 40px; height: 40px; border-radius: 999px; border: 2px solid #fff; overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; color: #0071E3; background: rgba(0,113,227,0.1); flex-shrink: 0; cursor: pointer; box-shadow: 0 2px 8px rgba(0,113,227,0.15); transition: transform 0.2s ease; }
+  .pfp-button:hover { transform: scale(1.05); }
+  
+  @keyframes cardExit { 
+    0% { opacity: 1; transform: translateX(0) scale(1); } 
+    100% { opacity: 0; transform: translateX(-100%) scale(0.8); } 
+  }
+  .card-exiting { animation: cardExit 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  
+  .map-btn { 
+    width: 48px; height: 48px; border-radius: 16px; background: rgba(255, 255, 255, 0.9); 
+    backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.3); 
+    display: flex; align-items: center; justify-content: center; cursor: pointer; 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+  }
+  .map-btn:hover { background: #fff; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); }
+  .map-btn:active { transform: scale(0.95); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+
+const Icon = ({ name, size = 20, color, className = '', strokeWidth = 2 }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current && window.lucide) {
+      ref.current.innerHTML = '';
+      const el = document.createElement('i');
+      el.setAttribute('data-lucide', name);
+      ref.current.appendChild(el);
+      lucide.createIcons({ nodes: [ref.current] });
+      const svg = ref.current.querySelector('svg');
+      if (svg) {
+        svg.setAttribute('width', size);
+        svg.setAttribute('height', size);
+        svg.setAttribute('stroke-width', strokeWidth);
+        if (color) svg.setAttribute('stroke', color);
+        svg.style.display = 'block';
+      }
+    }
+  }, [name, size, color, strokeWidth]);
+  return <span ref={ref} className={`inline-flex items-center justify-center ${className}`} />;
+};
+
+
+const categoryPhotos = {
+  Food: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=600&q=80',
+  Coffee: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80',
+  Groceries: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&q=80',
+  Electronics: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=600&q=80',
+  Beauty: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&q=80',
+  Clothing: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=600&q=80',
+  Other: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&q=80'
+};
+
+const SEED_OFFERS = [
+  { 
+    id: 1, 
+    store: 'Starbucks', 
+    title: 'Morning Latte Run', 
+    dealType: 'Buy 4 Get 1 Free', 
+    category: 'Coffee', 
+    status: 'waiting', 
+    joinedCount: 3, 
+    neededCount: 4, 
+    pricePerPerson: 6.50, 
+    distance: 0.3, 
+    expiresIn: 45, 
+    storeLocation: '123 Main St', 
+    locationLat: 37.7927, 
+    locationLng: -122.4010, 
+    locationLabel: 'San Francisco, 123 Main St', 
+    notes: 'Need one more for the free drink! Meet at the counter.', 
+    imageUrl: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&q=80', 
+    verified: true, 
+    saved: false, 
+    participants: [{ label: 'Jordan', userId: 'user-2' }, { label: 'Sam', userId: 'user-3' }, { label: 'Casey', userId: 'user-4' }] 
+  },
+  { 
+    id: 2, 
+    store: 'Whole Foods', 
+    title: 'Weekly Organic Haul', 
+    dealType: 'Bulk Discount 20% Off', 
+    category: 'Groceries', 
+    status: 'ready', 
+    joinedCount: 3, 
+    neededCount: 3, 
+    pricePerPerson: 45.00, 
+    distance: 1.2, 
+    expiresIn: 90, 
+    storeLocation: '456 Oak Ave', 
+    locationLat: 37.7694, 
+    locationLng: -122.4148, 
+    locationLabel: 'San Francisco, 456 Oak Ave', 
+    notes: 'Splitting the bulk basket. Pickup at 5pm.', 
+    imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&q=80', 
+    verified: true, 
+    saved: false, 
+    participants: [{ label: 'Sam', userId: 'user-3' }, { label: 'Casey', userId: 'user-4' }, { label: 'Jordan', userId: 'user-2' }] 
+  },
+  { 
+    id: 3, 
+    store: 'Apple Store', 
+    title: 'AirPods Pro Group Buy', 
+    dealType: 'Education Pricing Split', 
+    category: 'Electronics', 
+    status: 'waiting', 
+    joinedCount: 2, 
+    neededCount: 5, 
+    pricePerPerson: 189.00, 
+    distance: 2.1, 
+    expiresIn: 120, 
+    storeLocation: 'Westfield Mall', 
+    locationLat: 37.7869, 
+    locationLng: -122.3999, 
+    locationLabel: 'San Francisco, Westfield Mall', 
+    notes: 'Buying together to get the student discount.', 
+    imageUrl: 'https://images.unsplash.com/photo-1588423771073-b8903fead85b?w=400&q=80', 
+    verified: true, 
+    saved: false, 
+    participants: [{ label: 'Alex', userId: 'guest-user' }, { label: 'Jamie', userId: 'user-6' }] 
+  }
+];
+
+const SEED_MESSAGES = {
+  1: [
+    { id: 1, offerId: 1, from: 'Jordan', role: 'participant', text: 'Hey! I just joined. Anyone else getting a venti?', createdAt: new Date(Date.now() - 3600000).toISOString() },
+    { id: 2, offerId: 1, from: 'Sam', role: 'participant', text: 'Yes! Grande for me. When are you going?', createdAt: new Date(Date.now() - 3200000).toISOString() },
+    { id: 3, offerId: 1, from: 'System', role: 'system', text: 'Sam joined the group.', createdAt: new Date(Date.now() - 3000000).toISOString() },
+    { id: 4, offerId: 1, from: 'Jordan', role: 'participant', text: 'Planning on 3pm today if we hit 4 people!', createdAt: new Date(Date.now() - 2800000).toISOString() },
+  ],
+  2: [
+    { id: 5, offerId: 2, from: 'System', role: 'system', text: 'Group is ready! Head to Whole Foods.', createdAt: new Date(Date.now() - 7200000).toISOString() },
+    { id: 6, offerId: 2, from: 'Sam', role: 'participant', text: 'Amazing, see you all there at 11am.', createdAt: new Date(Date.now() - 7000000).toISOString() },
+    { id: 7, offerId: 2, from: 'Jordan', role: 'participant', text: 'I can coordinate the basket — any special requests?', createdAt: new Date(Date.now() - 6800000).toISOString() },
+    { id: 8, offerId: 2, from: 'Casey', role: 'participant', text: 'Can you grab some almond milk?', createdAt: new Date(Date.now() - 6600000).toISOString() },
+  ],
+  7: [
+    { id: 9, offerId: 7, from: 'System', role: 'system', text: 'Group is ready! 4/4 members joined.', createdAt: new Date(Date.now() - 1800000).toISOString() },
+    { id: 10, offerId: 7, from: 'Jordan', role: 'participant', text: 'Great! So happy this filled up fast.', createdAt: new Date(Date.now() - 1700000).toISOString() },
+    { id: 11, offerId: 7, from: 'Sam', role: 'participant', text: 'When do we want to do the pickup?', createdAt: new Date(Date.now() - 1600000).toISOString() },
+    { id: 12, offerId: 7, from: 'Alex', role: 'me', text: 'Saturday morning works for me.', createdAt: new Date(Date.now() - 1500000).toISOString() },
+    { id: 13, offerId: 7, from: 'Casey', role: 'participant', text: "Same! Let's say 10am?", createdAt: new Date(Date.now() - 1400000).toISOString() },
+  ],
+};
+
+const SEED_NOTIFICATIONS = [
+  { id: 1, userId: 'guest-user', title: 'Jordan joined your offer!', text: 'Jordan joined the AirPods Pro Group Order.', kind: 'join', read: false, offerId: 3, createdAt: new Date(Date.now() - 900000).toISOString() },
+  { id: 2, userId: 'guest-user', title: 'Deal ready!', text: 'Blue Bottle Coffee Weekly Subscription now has enough people.', kind: 'done', read: false, offerId: 7, createdAt: new Date(Date.now() - 1800000).toISOString() },
+  { id: 3, userId: 'guest-user', title: 'New offer nearby', text: 'Nike Sneaker Group Buy — 3.2km away, need 3 more.', kind: 'offer', read: true, offerId: 6, createdAt: new Date(Date.now() - 86400000).toISOString() },
+  { id: 4, userId: 'guest-user', title: 'Welcome to SplitDeal!', text: 'Find group deals nearby and save together.', kind: 'system', read: true, offerId: null, createdAt: new Date(Date.now() - 172800000).toISOString() },
+]
+
+// Dynamic User Initialization from Login
+const getAuthUser = () => {
+  const saved = localStorage.getItem('sd_currentUser');
+  if (!saved) return {
+    id: 'guest', displayName: 'Guest', profileImage: null,
+    interests: [], locationEnabled: true, locationLabel: 'San Francisco',
+    radiusKm: 5, trustScore: 4.9, completedDeals: 0, myPools: []
+  };
+  const u = JSON.parse(saved);
+  return { 
+    id: u.username, 
+    displayName: u.fullName || u.username, 
+    profileImage: u.pfp || null,
+    interests: u.interests || [],
+    locationEnabled: u.locationEnabled ?? true,
+    locationLabel: u.locationLabel || 'San Francisco',
+    radiusKm: u.radiusKm || 5,
+    trustScore: 4.9, completedDeals: 24,
+    myPools: []
+  };
+};
+const SEED_USER = getAuthUser();
+
+
+// ========== STORE ==========
+function useStore() {
+  const init = (key, seed) => {
+    const stored = localStorage.getItem('sd_' + key);
+    if (!stored) { localStorage.setItem('sd_' + key, JSON.stringify(seed)); return seed; }
+    return JSON.parse(stored);
+  };
+
+  const logout = () => {
+    try {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('sd_'))
+        .forEach(k => localStorage.removeItem(k));
+    } catch (e) {}
+    // Redirect to login page
+    window.location.href = 'login.html';
+  };
+
+  const normalizeOffers = (list) => list.map(o => {
+    if (o.locationLat != null && o.locationLng != null) return o;
+    if (o.location && o.location.lat != null && o.location.lng != null) {
+      return { ...o, locationLat: o.location.lat, locationLng: o.location.lng, locationLabel: o.locationLabel || o.storeLocation || null };
+    }
+    return { ...o, locationLat: o.locationLat ?? null, locationLng: o.locationLng ?? null, locationLabel: o.locationLabel ?? o.storeLocation ?? null };
+  });
+
+  const [offers, setOffersState] = useState(() => normalizeOffers(init('offers', SEED_OFFERS)));
+  const [messages, setMessagesState] = useState(() => init('messages', SEED_MESSAGES));
+  const [notifications, setNotificationsState] = useState(() => init('notifications', SEED_NOTIFICATIONS));
+  const [user, setUserState] = useState(() => {
+    const stored = init('user', SEED_USER);
+    // Ensure all required fields exist with defaults
+    return {
+      ...stored,
+      interests: stored.interests || [],
+      locationEnabled: stored.locationEnabled ?? true,
+      locationLabel: stored.locationLabel || 'San Francisco',
+      radiusKm: stored.radiusKm || 5,
+      trustScore: stored.trustScore || 4.9,
+      completedDeals: stored.completedDeals || 0,
+      myPools: stored.myPools || [],
+    };
+  });
+  const [myJoined, setMyJoinedState] = useState(() => {
+    const stored = localStorage.getItem('sd_myJoined');
+    if (!stored) { const init = [3, 7]; localStorage.setItem('sd_myJoined', JSON.stringify(init)); return init; }
+    return JSON.parse(stored);
+  });
+  const [mySaved, setMySavedState] = useState(() => {
+    const stored = localStorage.getItem('sd_mySaved');
+    if (!stored) { localStorage.setItem('sd_mySaved', JSON.stringify([])); return []; }
+    return JSON.parse(stored);
+  });
+  const [myPassed, setMyPassedState] = useState(() => {
+    const stored = localStorage.getItem('sd_myPassed');
+    if (!stored) { localStorage.setItem('sd_myPassed', JSON.stringify([])); return []; }
+    return JSON.parse(stored);
+  });
+  const [myMuted, setMyMutedState] = useState(() => {
+    const stored = localStorage.getItem('sd_myMuted');
+    if (!stored) { localStorage.setItem('sd_myMuted', JSON.stringify([])); return []; }
+    return JSON.parse(stored);
+  });
+  // Purchase pools stored locally
+  const [myPools, setMyPoolsState] = useState(() => {
+    const stored = localStorage.getItem('sd_myPools');
+    if (!stored) { localStorage.setItem('sd_myPools', JSON.stringify([])); return []; }
+    return JSON.parse(stored);
+  });
+
+  const save = (key, val) => localStorage.setItem('sd_' + key, JSON.stringify(val));
+
+  // Minimal receipt verification stub (prevents runtime crash)
+  // Marks the deal as verified for the current user and logs a system message.
+  const uploadReceipt = (offerId) => {
+    const id = Number(offerId);
+    if (!id) return;
+    // Add a verified flag on the offer (if not present) and push a system message.
+    setOffers(offers.map(o => {
+      if (o.id !== id) return o;
+      return { ...o, verified: true, status: o.status === 'waiting' ? 'ready' : o.status };
+    }));
+    const systemMsg = { 
+      id: nextMsgId.current++,
+      offerId: id,
+      from: 'System',
+      role: 'system',
+      text: `Receipt uploaded. Deal verified.`,
+      createdAt: new Date().toISOString() 
+    };
+    setMessages({ ...messages, [id]: [...(messages[id] || []), systemMsg] });
+  };
+
+  const setOffers = v => { setOffersState(v); save('offers', v); };
+  const setMessages = v => { setMessagesState(v); save('messages', v); };
+  const setNotifications = v => { setNotificationsState(v); save('notifications', v); };
+  const setUser = v => { setUserState(v); save('user', v); };
+  const setMyJoined = v => { setMyJoinedState(v); save('myJoined', v); };
+  const setMySaved = v => { setMySavedState(v); save('mySaved', v); };
+  const setMyPassed = v => { setMyPassedState(v); save('myPassed', v); };
+  const setMyMuted = v => { setMyMutedState(v); save('myMuted', v); };
+  const setMyPools = v => { setMyPoolsState(v); save('myPools', v); };
+
+  let nextMsgId = useRef(200);
+  let nextPoolId = useRef(100);
+
+  const joinOffer = (id) => {
+    setOffers(offers.map(o => {
+      if (o.id !== id) return o;
+      const newCount = Math.min(o.neededCount, o.joinedCount + 1);
+      const newStatus = newCount >= o.neededCount ? 'ready' : 'waiting';
+      return { ...o, joinedCount: newCount, status: newStatus, participants: [...o.participants, { label: user.displayName, userId: 'guest-user' }] };
+    }));
+    if (!myJoined.includes(id)) setMyJoined([...myJoined, id]);
+    const offer = offers.find(o => o.id === id);
+    if (offer) {
+      const systemMsg = { id: nextMsgId.current++, offerId: id, from: 'System', role: 'system', text: `${user.displayName} joined the group.`, createdAt: new Date().toISOString() };
+      setMessages({ ...messages, [id]: [...(messages[id] || []), systemMsg] });
+    }
+  };
+
+  const leaveOffer = (id) => {
+    setOffers(offers.map(o => {
+      if (o.id !== id) return o;
+      const newCount = Math.max(0, o.joinedCount - 1);
+      return { ...o, joinedCount: newCount, status: newCount >= o.neededCount ? 'ready' : 'waiting', participants: o.participants.filter(p => p.userId !== 'guest-user') };
+    }));
+    setMyJoined(myJoined.filter(i => i !== id));
+  };
+
+  const saveOffer = (id) => {
+    if (!mySaved.includes(id)) setMySaved([...mySaved, id]);
+  };
+  const unsaveOffer = (id) => setMySaved(mySaved.filter(i => i !== id));
+  const passOffer = (id) => { if (!myPassed.includes(id)) setMyPassed([...myPassed, id]); };
+  const toggleMuteOffer = (id) => setMyMuted(myMuted.includes(id) ? myMuted.filter(i => i !== id) : [...myMuted, id]);
+
+  const completeOffer = (id) => {
+    setOffers(offers.map(o => o.id === id ? { ...o, status: 'completed' } : o));
+    const systemMsg = { id: nextMsgId.current++, offerId: id, from: 'System', role: 'system', text: 'Deal marked as completed by the group.', createdAt: new Date().toISOString() };
+    setMessages({ ...messages, [id]: [...(messages[id] || []), systemMsg] });
+    const newNotif = { id: Date.now(), title: 'Deal completed!', text: 'You can now rate the experience.', kind: 'done', read: false, offerId: id, createdAt: new Date().toISOString() };
+    setNotifications([newNotif, ...notifications]);
+  };
+
+  const sendMessage = (offerId, text, from = user.displayName || 'Alex', role = 'me') => {
+    const msg = { id: nextMsgId.current++, offerId, from, role, text, createdAt: new Date().toISOString() };
+    setMessages({ ...messages, [offerId]: [...(messages[offerId] || []), msg] });
+  };
+
+  const markNotificationRead = (id) => {
+    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  const createOffer = (data) => {
+    const newId = Math.max(...offers.map(o => o.id), 0) + 1;
+    const locationLat = data.locationLat ?? null;
+    const locationLng = data.locationLng ?? null;
+    const locationLabel = data.locationLabel ?? data.storeLocation ?? null;
+    const newOffer = {
+      id: newId,
+      ...data,
+      locationLat, locationLng, locationLabel,
+      storeLocation: data.storeLocation ?? locationLabel ?? '',
+      status: 'waiting', joinedCount: 1, verified: false, saved: false,
+      participants: [{ label: user.displayName, userId: 'guest-user' }],
+      createdAt: new Date().toISOString(),
+    };
+    setOffers([newOffer, ...offers]);
+    setMyJoined([...myJoined, newId]);
+    const welcome = { id: nextMsgId.current++, offerId: newId, from: 'System', role: 'system', text: 'Deal created! Waiting for people to join.', createdAt: new Date().toISOString() };
+    setMessages({ ...messages, [newId]: [welcome] });
+    return newId;
+  };
+
+  // Create a purchase pool for an existing offer
+  const createPool = (offerId, quantity) => {
+    const poolId = nextPoolId.current++;
+    const pool = {
+      id: poolId,
+      offerId,
+      totalQuantity: Number(quantity) || 1,
+      participants: [{ name: user.displayName, quantity: Number(quantity) || 1, joinedAt: new Date().toISOString() }],
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...myPools, pool];
+    setMyPools(updated);
+    return poolId;
+  };
+
+  // Join an existing pool
+  const joinPool = (poolId, quantity) => {
+    const updated = myPools.map(p => {
+      if (p.id !== poolId) return p;
+      return {
+        ...p,
+        totalQuantity: p.totalQuantity + (Number(quantity) || 1),
+        participants: [...p.participants, { name: user.displayName, quantity: Number(quantity) || 1, joinedAt: new Date().toISOString() }],
+      };
+    });
+    setMyPools(updated);
+  };
+
+  const updateUser = (data) => setUser({ ...user, ...data });
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  // ========== BUYER MATCHING ENGINE ==========
+  // Auto-matches users who want the same product based on interests + store + deal type
+  const getBuyerMatches = useCallback(() => {
+    const matches = [];
+    const unjoined = offers.filter(o => !myJoined.includes(o.id) && o.status !== 'completed' && o.category && o.store);
+
+    for (const offer of unjoined) {
+      // Match by category overlap with user interests
+      const interestMatch = (user.interests || []).some(i => i.toLowerCase() === (offer.category || '').toLowerCase());
+      // Match by deal type similarity
+      const dealTypeMatch = offer.dealType.includes('Buy') || offer.dealType.includes('Bulk') || offer.dealType.includes('Group');
+      // Match by proximity (within radius)
+      const withinRadius = (offer.distance || 99) <= (user.radiusKm || 5);
+
+      if (interestMatch && withinRadius) {
+        const score = (interestMatch ? 50 : 0) + (dealTypeMatch ? 30 : 0) + (withinRadius ? 20 : 0);
+        matches.push({
+          offer,
+          score,
+          reason: interestMatch ? `You're interested in ${offer.category}` : 'Nearby deal',
+          autoMatched: true,
+        });
+      }
+    }
+    matches.sort((a, b) => b.score - a.score);
+    return matches;
+  }, [offers, myJoined, user.interests, user.radiusKm]);
+
+  // ========== PURCHASE POOLING ENGINE ==========
+  // For each offer, check if there are pools that qualify for the promotion
+  const getPoolStatus = useCallback((offer) => {
+    const pools = myPools.filter(p => p.offerId === offer.id);
+    const totalQty = pools.reduce((s, p) => s + p.totalQuantity, 0);
+    return { pools, totalQty };
+  }, [myPools]);
+
+  // Helper: parse deal type to get minimum quantity needed
+  const getMinQuantity = (dealType) => {
+    if (dealType.includes('Buy 2')) return 2;
+    if (dealType.includes('Buy 3')) return 3;
+    if (dealType.includes('Buy 4')) return 4;
+    if (dealType.includes('Buy 5')) return 5;
+    if (dealType.includes('Bulk') || dealType.includes('Group')) return 3;
+    return 2;
+  };
+
+  const estimatedSavings = (offer) => {
+    const deal = offer.dealType || '';
+    const price = offer.pricePerPerson || 0;
+    if (deal.includes('20%')) return Math.round(price * 0.2 * 100) / 100;
+    if (deal.includes('15%')) return Math.round(price * 0.15 * 100) / 100;
+    if (deal.includes('25%')) return Math.round(price * 0.25 * 100) / 100;
+    if (deal.includes('Free')) return Math.round(price * 100) / 100;
+    return Math.round(price * 0.1 * 100) / 100;
+  };
+
+  return {
+    offers, messages, notifications, user, myJoined, mySaved, myPassed, myMuted, myPools,
+    joinOffer, leaveOffer, saveOffer, unsaveOffer, completeOffer,
+    passOffer, toggleMuteOffer, sendMessage, markNotificationRead, createOffer, updateUser, logout, unreadCount,
+    createPool, joinPool, getBuyerMatches, getPoolStatus, getMinQuantity, estimatedSavings,
+    uploadReceipt,
+  };
+}
+
+
+function useRouter() {
+  const [path, setPath] = useState(window.location.hash.slice(1) || '/');
+  useEffect(() => {
+    const handler = () => setPath(window.location.hash.slice(1) || '/');
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, []);
+  const navigate = (to) => { window.location.hash = to; };
+  return { path, navigate };
+}
+
+
+function timeAgo(isoStr) {
+  const diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
+}
+
+function formatTime(isoStr) {
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function Avatar({ label, size = 28, image }) {
+  const colors = ['#0071E3','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16'];
+  const color = colors[label.charCodeAt(0) % colors.length];
+  return (
+    <div style={{ width: size, height: size, borderRadius: 999, background: image ? 'transparent' : color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.floor(size * 0.36), fontWeight: 700, flexShrink: 0, border: '2px solid #fff', overflow: 'hidden' }}>
+      {image ? <img src={image} alt={label} className="avatar-img" /> : label.slice(0, 2).toUpperCase()}
+    </div>
+  );
+}
+
+function Badge({ children, variant = 'default' }) {
+  const styles = {
+    waiting: 'badge-waiting',
+    ready: 'badge-ready',
+    completed: 'badge-completed',
+    verified: 'badge-verified',
+  };
+  return (
+    <span className={`inline-flex items-center font-bold text-[11px] px-2 py-[3px] rounded-lg ${styles[variant] || 'badge-waiting'}`}>
+      {children}
+    </span>
+  );
+}
+
+function DealExplain({ dealType }) {
+  const t = dealType || '';
+  let explain = '';
+  if (t.includes('Buy 2 Get 1') || t.includes('Buy 2, Get 1')) explain = 'Get 1 item free when you buy 2 together';
+  else if (t.includes('Buy 3 Get 1') || t.includes('Buy 3, Get 1')) explain = 'Get 1 item free when you buy 3 together';
+  else if (t.includes('Buy 4 Get 1') || t.includes('Buy 4, Get 1')) explain = 'Get 1 item free when you buy 4 together';
+  else if (t.includes('Buy 4')) explain = 'Buy 4 items to unlock the free item';
+  else if (t.includes('20%')) explain = '20% off your total when 3+ people join';
+  else if (t.includes('15%')) explain = '15% off your total when 4+ people join';
+  else if (t.includes('25%')) explain = '25% off your total when 3+ people join';
+  else if (t.includes('Group')) explain = 'Special group rate available when enough people join';
+  else if (t.includes('Bulk')) explain = 'Bulk discount applied when minimum basket is reached';
+  else if (t.includes('Free Shipping')) explain = 'Free shipping unlocked with group orders';
+  else if (t.includes('Annual') || t.includes('Shared')) explain = 'Share the cost of an annual plan among members';
+  else if (t.includes('Strength')) explain = 'No minimum required — more people = better deals';
+  if (!explain) explain = 'Group deal — more people means bigger savings';
+  return <div className="deal-explain"><Icon name="info" size={12} color="#0071E3" style={{ marginRight: 4 }} />{explain}</div>;
+}
+
+
+function OfferCard({ offer, onJoin, onPass, isJoined, onChatClick, style = {}, savings }) {
+  const [isExiting, setIsExiting] = useState(false);
+  const pct = Math.min(100, Math.round((offer.joinedCount / offer.neededCount) * 100));
+  const isReady = offer.status === 'ready';
+  const isCompleted = offer.status === 'completed';
+  const needMore = offer.neededCount - offer.joinedCount;
+  const isHot = (offer.joinedCount / offer.neededCount) >= 0.75 && !isReady;
+
+  const handlePass = () => {
+    setIsExiting(true);
+    setTimeout(() => onPass(), 350);
+  };
+
+  return (
+    <div className={`card animate-in glow-card ${isExiting ? 'card-exiting' : ''}`} style={{ ...style, boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+      <div style={{ position: 'relative', height: 148, overflow: 'hidden', background: '#E5E9EF' }}>
+        <img src={offer.imageUrl} alt={offer.store} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display='none'; }} />
+        <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <Badge variant={isCompleted ? 'completed' : isReady ? 'ready' : 'waiting'}>
+            {isCompleted ? 'Completed' : isReady ? 'Deal Ready!' : 'Waiting'}
+          </Badge>
+          <Badge variant="waiting">${offer.pricePerPerson.toFixed(2)} / person</Badge>
+          {isHot && <span className="hot-badge"><span className="pulse-dot" style={{ background: '#fff' }} /> HOT</span>}
+        </div>
+        {offer.verified && (
+          <div style={{ position: 'absolute', top: 12, right: 12 }}>
+            <Badge variant="verified">Verified</Badge>
+          </div>
+        )}
+      </div>
+      <div style={{ padding: '16px 16px 18px' }}>
+        <div style={{ marginBottom: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: '#6B7280', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>
+            <span style={{ fontWeight: 700 }}>{offer.store}</span>
+            <span style={{ color: '#0071E3' }}>{offer.category}</span>
+          </div>
+          <h3 style={{ fontWeight: 800, fontSize: 17, lineHeight: 1.25, color: '#111827' }}>{offer.title}</h3>
+          <div style={{ marginTop: 3, fontSize: 11, color: '#6B7280', fontWeight: 600 }}>{offer.dealType}</div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 16, fontSize: 13, color: '#6B7280', fontWeight: 600, margin: '10px 0 12px' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="users" size={14} color="#0071E3" /> {offer.joinedCount}/{offer.neededCount}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="map-pin" size={14} color="#0071E3" /> {offer.distance}km</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="clock" size={14} color="#0071E3" /> {offer.expiresIn}m</span>
+        </div>
+
+        <DealExplain dealType={offer.dealType} />
+
+        <div style={{ marginTop: 12, marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+            <span style={{ color: pct === 100 ? '#15803d' : '#0071E3' }}>{pct}% Complete</span>
+            <span style={{ color: '#6B7280' }}>{needMore > 0 ? `Need ${needMore} more` : 'Full!'}</span>
+          </div>
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${pct}%`, background: pct === 100 ? '#22c55e' : '#0071E3' }} />
+          </div>
+        </div>
+
+        {offer.participants.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <div className="avatar-stack">
+              {offer.participants.slice(0, 4).map((p, i) => (
+                <div key={i} className="av" style={{ zIndex: 4 - i }}>{p.label.slice(0, 2).toUpperCase()}</div>
+              ))}
+              {offer.participants.length > 4 && <div className="av">+{offer.participants.length - 4}</div>}
+            </div>
+            <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>are in this deal</span>
+          </div>
+        )}
+
+        {!isCompleted && (
+          isJoined ? (
+            <button className="btn-primary w-full" style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%' }} onClick={onChatClick}>
+              <Icon name="message-square" size={16} color="#fff" /> Open Chat
+            </button>
+          ) : (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn-outline" style={{ flex: 1, height: 48 }} onClick={handlePass}>Pass</button>
+              <button className="btn-primary" style={{ flex: 2, height: 48 }} onClick={onJoin}>Join Deal</button>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ========== PROFILE PIC BUTTON ==========
+function PfpButton({ user, onClick }) {
+  const initials = (user?.displayName || 'ME').slice(0, 2).toUpperCase();
+  return (
+    <button onClick={onClick} className="pfp-button">
+      {user?.profileImage ? (
+        <img src={user.profileImage} alt="PFP" className="w-full h-full object-cover" />
+      ) : initials}
+    </button>
+  );
+}
+
+
+
+
+function QrCodeDisplay({ offer, onClose }) {
+  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=splitdeal://${offer.id}`;
+  return (
+    <div className="qr-code-modal" onClick={onClose}>
+      <div className="qr-code-content" onClick={e => e.stopPropagation()}>
+        <h3 style={{ fontWeight: 800, fontSize: 18, marginBottom: 16 }}>Pickup QR Code</h3>
+        <img src={qrCodeImageUrl} alt="QR Code" style={{ margin: '0 auto 16px' }} />
+        <button className="btn-primary" style={{ width: '100%', height: 40 }} onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+}
+
+function BottomNav({ path, navigate, unreadCount }) {
+  if (path.startsWith('/chat/') || path === '/onboarding') return null;
+  const items = [
+    { href: '/', icon: 'home', label: 'Home' },
+    { href: '/matches', icon: 'sparkles', label: 'Matches' },
+    { href: '/create', icon: 'plus-circle', label: 'Create', primary: true },
+    { href: '/map', icon: 'map', label: 'Map' },
+    { href: '/profile', icon: 'user', label: 'Profile' },
+  ];
+  return (
+    <div style={{ position: 'fixed', bottom: 24, left: 0, right: 0, zIndex: 100, display: 'flex', justifyContent: 'center', padding: '0 16px' }}>
+      <nav className="bottom-nav" style={{ display: 'flex', alignItems: 'center', gap: 4, borderRadius: 999, padding: '8px 8px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+        {items.map(item => {
+          const isActive = path === item.href;
+          if (item.primary) {
+            return (
+              <button key={item.href} onClick={() => navigate(item.href)} style={{ width: 56, height: 56, borderRadius: 999, background: '#0071E3', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,113,227,0.4)', transform: isActive ? 'scale(1.06)' : 'scale(1)', transition: 'all 0.15s', margin: '0 2px' }}>
+                <Icon name={item.icon} size={26} color="#fff" strokeWidth={2.5} />
+              </button>
+            );
+          }
+          return (
+            <button key={item.href} onClick={() => navigate(item.href)} style={{ width: 56, height: 56, borderRadius: 999, background: isActive ? 'rgba(0,113,227,0.1)' : 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, border: 'none', cursor: 'pointer', color: isActive ? '#0071E3' : '#9CA3AF', transition: 'all 0.15s' }}>
+              {item.icon === 'sparkles' && unreadCount > 0 ? (
+                <span style={{ position: 'absolute', top: 4, right: 4, width: 16, height: 16, background: '#0071E3', color: '#fff', borderRadius: 999, fontSize: 9, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadCount}</span>
+              ) : null}
+              <Icon name={item.icon} size={22} color={isActive ? '#0071E3' : '#9CA3AF'} strokeWidth={isActive ? 2.5 : 2} />
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
+
+const CATEGORIES = ['All', 'Food', 'Coffee', 'Groceries', 'Electronics', 'Beauty', 'Clothing'];
+
+
+function Home({ store, navigate }) {
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [search, setSearch] = useState('');
+  const { offers, myJoined, mySaved, myPassed, joinOffer, passOffer, unreadCount, user, estimatedSavings } = store;
+
+  const [pickedInterests, setPickedInterests] = useState([]);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [geoAlert, setGeoAlert] = useState(null);
+
+  useEffect(() => {
+    const hotDeals = offers.filter(o => !myJoined.includes(o.id) && !myPassed.includes(o.id) && (o.joinedCount / o.neededCount) >= 0.75 && o.status !== 'ready' && o.status !== 'completed');
+    if (hotDeals.length > 0) setGeoAlert(`Hot deal nearby! ${hotDeals[0].store} needs ${hotDeals[0].neededCount - hotDeals[0].joinedCount} more.`);
+  }, [offers, myJoined, myPassed]);
+
+  useEffect(() => {
+    if (!user?.interests) return;
+    if (!filterOpen) setPickedInterests([...(user.interests || [])]);
+  }, [user?.interests, filterOpen]);
+
+  const filtered = offers.filter(o => {
+    if (o.status === 'completed') return false;
+    if (myPassed.includes(o.id)) return false;
+    if (activeCategory === '__interests__') {
+      const allowed = (pickedInterests || []).map(x => (x || '').toLowerCase());
+      if (!allowed.includes((o.category || '').toLowerCase())) return false;
+    } else {
+      if (activeCategory !== 'All' && o.category && o.category.toLowerCase() !== activeCategory.toLowerCase()) return false;
+    }
+    if (search && !o.store.toLowerCase().includes(search.toLowerCase()) && !o.title.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#F2F5F8' }}>
+      <header className="header-blur" style={{ position: 'sticky', top: 0, zIndex: 50, padding: '12px 16px 12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* PFP in top-left */}
+            <PfpButton user={user} onClick={() => navigate('/profile')} />
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 20, letterSpacing: '-0.02em', color: '#111827' }}>{user.displayName}</div>
+              <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+                <Icon name="map-pin" size={11} color="#9CA3AF" /> {user.locationLabel || (user.locationEnabled ? 'Your current location' : 'Location hidden')}
+              </div>
+            </div>
+          </div>
+          <button onClick={() => navigate('/notifications')} style={{ position: 'relative', background: 'transparent', border: 'none', cursor: 'pointer', padding: 6, borderRadius: 999 }}>
+            <Icon name="bell" size={24} color="#374151" />
+            {unreadCount > 0 && <span style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, background: '#ef4444', borderRadius: 999, border: '2px solid #F2F5F8' }} />}
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}>
+              <Icon name="search" size={18} color="#9CA3AF" />
+            </div>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search deals, stores..." style={{ width: '100%', height: 44, paddingLeft: 42, paddingRight: 12, borderRadius: 999, border: '1.5px solid #E5E9EF', background: 'rgba(243,244,246,0.7)', fontSize: 14, fontWeight: 500, outline: 'none', color: '#111827' }} />
+          </div>
+        </div>
+      </header>
+
+      {geoAlert && (
+        <div className="animate-in" style={{ background: '#fef3c7', color: '#92400e', padding: '12px 16px', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #fde68a' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="map-pin" size={16} color="#d97706" /><span>{geoAlert}</span></div>
+          <button onClick={() => setGeoAlert(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><Icon name="x" size={16} color="#d97706" /></button>
+        </div>
+      )}
+
+      <div style={{ padding: '10px 0', background: '#F2F5F8' }}>
+        <div className="scrollbar-none" style={{ display: 'flex', gap: 8, padding: '0 16px', overflowX: 'auto' }}>
+          {CATEGORIES.map(c => (
+            <button key={c} onClick={() => { setActiveCategory(c); setFilterOpen(false); }} className={`category-chip ${activeCategory === c ? 'category-chip-active' : 'category-chip-inactive'}`}>
+              {c}
+            </button>
+          ))}
+          <button
+            onClick={() => { if ((user?.interests || []).length) { setActiveCategory('__interests__'); setFilterOpen(v => !v); } }}
+            className={`category-chip ${activeCategory === '__interests__' ? 'category-chip-active' : 'category-chip-inactive'}`}
+            style={{ opacity: (user?.interests?.length ? 1 : 0.5), pointerEvents: (user?.interests?.length ? 'auto' : 'none') }}
+          >
+            My Interests
+          </button>
+        </div>
+        {filterOpen && activeCategory === '__interests__' && (
+          <div style={{ padding: '12px 16px 0' }}>
+            <div className="card" style={{ padding: 14, borderRadius: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: 14 }}>Pick what you want to see</div>
+                  <div style={{ fontSize: 12, color: '#6B7280', fontWeight: 600, marginTop: 2 }}>Showing: {pickedInterests.length ? pickedInterests.join(', ') : 'None'}</div>
+                </div>
+                <button onClick={() => setFilterOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 20, fontWeight: 900, color: '#374151' }}>×</button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {(user?.interests || []).length === 0 ? (
+                  <div style={{ fontSize: 13, color: '#6B7280', fontWeight: 700 }}>Add interests in your Profile to use filtering.</div>
+                ) : (user.interests || []).map(interest => {
+                  const active = pickedInterests.includes(interest);
+                  return (
+                    <button key={interest} onClick={() => setPickedInterests(prev => prev.includes(interest) ? prev.filter(x => x !== interest) : [...prev, interest])} className={`interest-chip ${active ? 'interest-chip-active' : 'interest-chip-inactive'}`}>{interest}</button>
+                  );
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                <button className="btn-outline" style={{ flex: 1, height: 44 }} onClick={() => setPickedInterests([...(user?.interests || [])])}>Select All</button>
+                <button className="btn-primary" style={{ flex: 1, height: 44 }} onClick={() => setFilterOpen(false)}>Done</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <main style={{ padding: '4px 16px 120px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {filtered.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 16px', textAlign: 'center' }}>
+            <div style={{ width: 80, height: 80, background: '#fff', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, border: '1.5px solid #E5E9EF' }}>
+              <Icon name="search" size={36} color="#D1D5DB" />
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>No hidden deals here</div>
+            <div style={{ color: '#6B7280', marginBottom: 24, maxWidth: 240 }}>We couldn't find any deals matching your search. Be the first to start one!</div>
+            <button className="btn-primary" style={{ padding: '12px 32px', fontSize: 15 }} onClick={() => navigate('/create')}>Create a Deal</button>
+          </div>
+        ) : filtered.map((offer, idx) => (
+          <OfferCard
+            key={offer.id}
+            offer={{ ...offer, saved: mySaved.includes(offer.id) }}
+            isJoined={myJoined.includes(offer.id)}
+            savings={estimatedSavings(offer)}
+            style={{ animationDelay: `${idx * 60}ms` }}
+            onJoin={() => joinOffer(offer.id)}
+            onPass={() => passOffer(offer.id)}
+            onChatClick={() => navigate(`/chat/${offer.id}`)}
+          />
+        ))}
+      </main>
+    </div>
+  );
+}
+
+
+function CreateOffer({ store, navigate }) {
+  const { createOffer, user } = store;
+  const [form, setForm] = useState({
+    store: '', title: '', category: 'Food', dealType: 'BOGO',
+    neededCount: 3, pricePerPerson: '',
+    locationLabel: '', locationLat: null, locationLng: null,
+    storeLocation: '', notes: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [coverPhoto, setCoverPhoto] = useState(null);
+  const fileInputRef = useRef(null);
+  const locationMapNodeRef = useRef(null);
+  const locationMapRef = useRef(null);
+  const locationMarkerRef = useRef(null);
+  const [locStatus, setLocStatus] = useState('Pick an exact location on the map');
+  const [useCurrentGps, setUseCurrentGps] = useState(false);
+
+  const categoryPhotos = {
+    Food: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=600&q=80',
+    Coffee: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&q=80',
+    Groceries: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&q=80',
+    Electronics: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=600&q=80',
+    Beauty: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&q=80',
+    Clothing: 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=600&q=80',
+    Other: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=600&q=80'
+  };
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const reverseGeocode = async (lat, lng) => {
+    try {
+      setLocStatus('Getting city & address…');
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('Reverse geocode failed');
+      const data = await res.json();
+      const a = data?.address || {};
+      const parts = [a.city || a.town || a.village || a.municipality, a.road || a.neighbourhood, a.house_number].filter(Boolean);
+      const label = parts.length ? parts.join(', ') : (data?.display_name || 'Selected location');
+      set('locationLabel', label);
+      set('storeLocation', label);
+      setLocStatus('Location selected');
+    } catch (err) {
+      set('locationLabel', `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`);
+      set('storeLocation', `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`);
+      setLocStatus('Location selected (address unavailable)');
+    }
+  };
+
+  const setSelectedLocation = (lat, lng) => {
+    set('locationLat', lat);
+    set('locationLng', lng);
+    if (locationMarkerRef.current) locationMarkerRef.current.setLatLng([lat, lng]);
+    reverseGeocode(lat, lng);
+  };
+
+  useEffect(() => {
+    if (!window.L || !locationMapNodeRef.current) return;
+    if (locationMapRef.current) return;
+
+    const startMap = (lat, lng) => {
+      const map = window.L.map(locationMapNodeRef.current, { zoomControl: false }).setView([lat, lng], 14);
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+      window.L.control.zoom({ position: 'bottomright' }).addTo(map);
+      locationMapRef.current = map;
+
+      const marker = window.L.marker([lat, lng], { draggable: true }).addTo(map);
+      locationMarkerRef.current = marker;
+
+      marker.on('dragend', () => {
+        const p = marker.getLatLng();
+        setSelectedLocation(p.lat, p.lng);
+      });
+      map.on('click', (e) => {
+        const { lat, lng } = e.latlng;
+        marker.setLatLng([lat, lng]);
+        setSelectedLocation(lat, lng);
+      });
+
+      setSelectedLocation(lat, lng);
+    };
+
+    if (navigator.geolocation) {
+      setLocStatus('Centering picker…');
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => startMap(coords.latitude, coords.longitude),
+        () => startMap(37.7749, -122.4194),
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    } else {
+      startMap(37.7749, -122.4194);
+    }
+
+    return () => { try { locationMapRef.current?.remove(); } catch(e){} locationMapRef.current = null; };
+  }, []);
+
+  const useMyGps = () => {
+    setUseCurrentGps(true);
+    setLocStatus('Getting your GPS coordinates…');
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          set('locationLat', coords.latitude);
+          set('locationLng', coords.longitude);
+          if (locationMarkerRef.current) locationMarkerRef.current.setLatLng([coords.latitude, coords.longitude]);
+          reverseGeocode(coords.latitude, coords.longitude);
+        },
+        () => setLocStatus('Could not get GPS — tap the map instead'),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    } else {
+      setLocStatus('GPS not supported in this browser — tap the map to set location');
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.store || !form.title || !form.pricePerPerson) return;
+    if (form.locationLat == null || form.locationLng == null) { setLocStatus('Location is required'); return; }
+    setLoading(true);
+    setTimeout(() => {
+      const id = createOffer({
+        ...form,
+        neededCount: Number(form.neededCount),
+        pricePerPerson: Number(form.pricePerPerson),
+        distance: (Math.random() * 3 + 0.2).toFixed(1) * 1,
+        expiresIn: 60,
+        imageUrl: coverPhoto || categoryPhotos[form.category],
+        logo: form.store.slice(0, 2).toUpperCase(),
+      });
+      navigate(`/chat/${id}`);
+    }, 600);
+  };
+
+  const inputStyle = { width: '100%', padding: '12px 0', borderBottom: '2px solid #E5E9EF', border: 'none', background: 'transparent', fontSize: 16, fontWeight: 600, outline: 'none', color: '#111827' };
+  const selectStyle = { width: '100%', padding: '10px 12px', borderRadius: 12, border: '1.5px solid #E5E9EF', background: '#F9FAFB', fontSize: 14, fontWeight: 600, outline: 'none', color: '#111827' };
+  const labelStyle = { fontSize: 12, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 };
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#F2F5F8' }}>
+      <header className="header-blur" style={{ position: 'sticky', top: 0, zIndex: 50, padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button onClick={() => navigate('/')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 999 }}>
+          <Icon name="arrow-left" size={24} color="#374151" />
+        </button>
+        <span style={{ fontWeight: 800, fontSize: 18 }}>Create Deal</span>
+        <div style={{ width: 28 }} />
+      </header>
+
+      <main style={{ padding: '16px 16px 120px' }}>
+        <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const file = e.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = () => setCoverPhoto(reader.result); reader.readAsDataURL(file); } }} />
+        <button type="button" onClick={() => fileInputRef.current?.click()} style={{ width: '100%', marginBottom: 12, background: '#fff', border: '2px dashed #E5E9EF', borderRadius: 20, padding: coverPhoto ? 0 : '32px 16px', minHeight: 130, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden' }}>
+          {coverPhoto ? <img src={coverPhoto} alt="Cover" style={{ width: '100%', height: 180, objectFit: 'cover' }} /> : <>
+            <div style={{ width: 48, height: 48, background: 'rgba(0,113,227,0.1)', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+              <Icon name="upload" size={22} color="#0071E3" />
+            </div>
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>Add Cover Photo</div>
+            <div style={{ fontSize: 12, color: '#9CA3AF' }}>Choose from gallery</div>
+          </>}
+        </button>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, marginBottom: 20 }}>
+          {Object.entries(categoryPhotos).map(([category, photo]) => (
+            <button type="button" key={category} onClick={() => setCoverPhoto(photo)} style={{ border: coverPhoto === photo ? '3px solid #0071E3' : '2px solid #fff', padding: 0, borderRadius: 12, overflow: 'hidden', background: '#fff', cursor: 'pointer', flexShrink: 0 }}>
+              <img src={photo} alt={category} style={{ width: 62, height: 52, objectFit: 'cover', display: 'block' }} />
+              <span style={{ fontSize: 9, fontWeight: 700 }}>{category}</span>
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <div>
+              <div style={labelStyle}><Icon name="store" size={12} color="#9CA3AF" /> Store Name</div>
+              <input style={inputStyle} placeholder="e.g. Costco, Blue Bottle..." value={form.store} onChange={e => set('store', e.target.value)} required />
+            </div>
+            <div>
+              <div style={labelStyle}><Icon name="tag" size={12} color="#9CA3AF" /> Deal Title</div>
+              <input style={inputStyle} placeholder="e.g. Buy 1 Get 1 Free Lattes" value={form.title} onChange={e => set('title', e.target.value)} required />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <div style={labelStyle}>Category</div>
+                <select style={selectStyle} value={form.category} onChange={e => set('category', e.target.value)}>
+                  {['Food','Coffee','Groceries','Electronics','Beauty','Clothing','Other'].map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <div style={labelStyle}>Deal Type</div>
+                <select style={selectStyle} value={form.dealType} onChange={e => set('dealType', e.target.value)}>
+                  {['BOGO','Bulk Discount','Group Rate','Split Pack','Catering'].map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <div style={labelStyle}><Icon name="users" size={12} color="#9CA3AF" /> Total People</div>
+                <input type="number" min="2" max="20" style={{ ...selectStyle, textAlign: 'center', fontSize: 20, fontWeight: 800 }} value={form.neededCount} onChange={e => set('neededCount', e.target.value)} />
+              </div>
+              <div>
+                <div style={labelStyle}><Icon name="dollar-sign" size={12} color="#9CA3AF" /> Price/Person</div>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#9CA3AF', fontSize: 16 }}>$</span>
+                  <input type="number" step="0.01" min="0" style={{ ...selectStyle, paddingLeft: 28, fontSize: 18, fontWeight: 800 }} placeholder="0.00" value={form.pricePerPerson} onChange={e => set('pricePerPerson', e.target.value)} required />
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style={labelStyle}><Icon name="map-pin" size={12} color="#9CA3AF" /> Location (Required)</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <button type="button" onClick={useMyGps} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 999, background: useCurrentGps ? 'rgba(0,113,227,0.12)' : '#F3F4F6', border: '1.5px solid #E5E9EF', fontSize: 12, fontWeight: 700, color: useCurrentGps ? '#0071E3' : '#374151', cursor: 'pointer' }}>
+                  <Icon name="navigation" size={14} color={useCurrentGps ? '#0071E3' : '#374151'} />
+                  {useCurrentGps ? 'GPS Located' : 'Use My GPS'}
+                </button>
+                <span style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600 }}>or tap the map below</span>
+              </div>
+              <div style={{ height: 260, borderRadius: 16, overflow: 'hidden', border: '1.5px solid #E5E9EF', background: '#fff', position: 'relative' }}>
+                <div ref={locationMapNodeRef} style={{ position: 'absolute', inset: 0 }} />
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginTop: 10 }}>
+                {form.locationLabel || locStatus}
+              </div>
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: 20 }}>
+            <div style={labelStyle}><Icon name="align-left" size={12} color="#9CA3AF" /> Notes</div>
+            <textarea style={{ ...selectStyle, minHeight: 90, resize: 'none', paddingTop: 10 }} placeholder="Any details? e.g. 'I want the blue ones'" value={form.notes} onChange={e => set('notes', e.target.value)} />
+          </div>
+
+          <button type="submit" className="btn-primary" style={{ height: 56, fontSize: 16, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(0,113,227,0.3)' }} disabled={loading}>
+            {loading ? 'Publishing...' : 'Publish Deal'}
+          </button>
+        </form>
+      </main>
+    </div>
+  );
+}
+
+
+// ========== BUYER MATCHING PAGE ==========
+function Matches({ store, navigate }) {
+  const { offers, myJoined, getBuyerMatches, user } = store;
+  const matches = getBuyerMatches();
+  const activeMatches = offers.filter(o => myJoined.includes(o.id) && o.status !== 'completed');
+
+  const [tab, setTab] = useState('joined'); // default: Joined first
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#F2F5F8' }}>
+      <header className="header-blur" style={{ position: 'sticky', top: 0, zIndex: 50, padding: '16px 16px 0' }}>
+        <div style={{ fontWeight: 800, fontSize: 24, letterSpacing: '-0.02em' }}>Buyer Matches</div>
+        <div style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 600, marginTop: 2 }}>Automatically find people who want the same things</div>
+        <div style={{ display: 'flex', gap: 16, marginTop: 14, borderBottom: '1px solid #E5E9EF' }}>
+          <button onClick={() => setTab('auto')} className={tab === 'auto' ? 'tab-active' : 'tab-inactive'} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0', fontSize: 14, fontWeight: 800, borderBottom: tab === 'auto' ? '2px solid #0071E3' : '2px solid transparent' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="sparkles" size={16} /> Auto Matches</span>
+          </button>
+          <button onClick={() => setTab('joined')} className={tab === 'joined' ? 'tab-active' : 'tab-inactive'} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0', fontSize: 14, fontWeight: 800, borderBottom: tab === 'joined' ? '2px solid #0071E3' : '2px solid transparent' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="users" size={16} /> Joined ({activeMatches.length})</span>
+          </button>
+        </div>
+      </header>
+
+      <main style={{ padding: '12px 16px 120px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {tab === 'auto' ? (
+          matches.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 16px', textAlign: 'center' }}>
+              <div style={{ width: 80, height: 80, background: '#fff', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, border: '1.5px solid #E5E9EF' }}>
+                <Icon name="sparkles" size={36} color="#D1D5DB" />
+              </div>
+              <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>No matches found</div>
+              <div style={{ color: '#6B7280', marginBottom: 24, maxWidth: 280 }}>We'll automatically match you with people who want the same products. Add more interests to find better matches!</div>
+              <button className="btn-primary" style={{ padding: '12px 32px', fontSize: 15 }} onClick={() => navigate('/profile')}>Add Interests</button>
+            </div>
+          ) : matches.map(match => {
+            const o = match.offer;
+            return (
+              <button key={o.id} onClick={() => navigate(`/chat/${o.id}`)} className="card" style={{ display: 'flex', gap: 12, padding: '14px', border: '1.5px solid #E5E9EF', borderRadius: 20, cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'all 0.15s', background: '#fff', alignItems: 'center' }}>
+                <div className="match-score-ring">{match.score}%</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.title}</div>
+                    <span className="savings-tag">${store.estimatedSavings(o)}/saved</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600, marginBottom: 4 }}>{o.store} · {o.joinedCount}/{o.neededCount} joined</div>
+                  <div style={{ fontSize: 11, color: '#0071E3', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Icon name="check-circle-2" size={12} color="#0071E3" /> {match.reason}
+                  </div>
+                </div>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: '#E5E9EF', overflow: 'hidden', flexShrink: 0 }}>
+                  {o.imageUrl ? <img src={o.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#9CA3AF' }}>{o.store.slice(0,2)}</div>}
+                </div>
+              </button>
+            );
+          })
+        ) : (
+          activeMatches.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 16px', textAlign: 'center' }}>
+              <div style={{ width: 80, height: 80, background: '#fff', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, border: '1.5px solid #E5E9EF' }}>
+                <Icon name="users" size={36} color="#D1D5DB" />
+              </div>
+              <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>No active groups</div>
+              <div style={{ color: '#6B7280', marginBottom: 24, maxWidth: 240 }}>Join a deal to start chatting with your group!</div>
+              <button className="btn-primary" style={{ padding: '12px 32px', fontSize: 15 }} onClick={() => navigate('/')}>Find Deals</button>
+            </div>
+          ) : activeMatches.map(offer => {
+            const isReady = offer.status === 'ready';
+            return (
+              <button key={offer.id} onClick={() => navigate(`/chat/${offer.id}`)} className="card" style={{ display: 'flex', gap: 12, padding: '12px 14px', border: '1.5px solid #E5E9EF', borderRadius: 24, cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'all 0.15s', background: '#fff' }}>
+                <div style={{ width: 72, height: 72, borderRadius: 18, background: '#E5E9EF', overflow: 'hidden', flexShrink: 0 }}>
+                  {offer.imageUrl ? <img src={offer.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#9CA3AF' }}>{offer.store.slice(0,2)}</div>}
+                </div>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
+                    <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.3, paddingRight: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '75%' }}>{offer.title}</div>
+                    {isReady && <div style={{ width: 8, height: 8, borderRadius: 999, background: '#22c55e', flexShrink: 0, marginTop: 6, boxShadow: '0 0 0 4px rgba(34,197,94,0.15)' }} />}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600, marginBottom: 8 }}>{offer.store}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', gap: 10, fontSize: 12, fontWeight: 700, color: '#9CA3AF' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Icon name="users" size={12} color="#9CA3AF" />{offer.joinedCount}/{offer.neededCount}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Icon name="clock" size={12} color="#9CA3AF" />{offer.expiresIn}m</span>
+                    </div>
+                    <Badge variant={isReady ? 'ready' : 'waiting'}>{isReady ? 'Ready' : 'Waiting'}</Badge>
+                  </div>
+                </div>
+              </button>
+            );
+          })
+        )}
+      </main>
+    </div>
+  );
+}
+
+
+
+
+
+function Chat({ offerId, store, navigate }) {
+  const { offers, messages, myJoined, sendMessage, completeOffer, user, toggleMuteOffer, leaveOffer, myMuted } = store;
+  const id = parseInt(offerId);
+
+  const offer = offers.find(o => o.id === id);
+  const msgs = messages[id] || [];
+  const [input, setInput] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  const [hasLeft, setHasLeft] = useState(false);
+  const bottomRef = useRef(null);
+  const [showQr, setShowQr] = useState(false);
+  const isCreator = offer?.participants?.some(p => p.userId === store.user.id); // current user is part of the group
+
+
+  const isJoined = myJoined.includes(id);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [msgs.length]);
+
+  if (!offer) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: '#9CA3AF', fontWeight: 600 }}>
+      Offer not found. <button onClick={() => navigate('/')} style={{ marginLeft: 8, color: '#0071E3', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Go Home</button>
+    </div>
+  );
+
+  const isReady = offer.status === 'ready';
+  const isCompleted = offer.status === 'completed';
+  const pct = Math.min(100, Math.round((offer.joinedCount / offer.neededCount) * 100));
+
+  const handleSend = (e) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    sendMessage(id, input, user.displayName || 'Alex', 'me');
+    setInput('');
+  };
+
+  const handleComplete = () => completeOffer(id);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDoc = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [menuOpen]);
+
+  const isMuted = myMuted.includes(id);
+  const handleLeave = () => { leaveOffer(id); setHasLeft(true); setMenuOpen(false); setTimeout(() => navigate('/matches'), 0); };
+  if (hasLeft) return null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', background: '#F2F5F8', overflow: 'hidden' }}>
+      <header style={{ background: 'rgba(242,245,248,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderBottom: '1px solid #E5E9EF', flexShrink: 0, zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}>
+          <button onClick={() => navigate('/matches')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 2px', borderRadius: 8, flexShrink: 0 }}>
+            <Icon name="arrow-left" size={24} color="#374151" />
+          </button>
+          <div style={{ width: 40, height: 40, borderRadius: 999, background: '#E5E9EF', overflow: 'hidden', flexShrink: 0 }}>
+            {offer.imageUrl ? <img src={offer.imageUrl} alt={offer.store} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#9CA3AF', fontSize: 12 }}>{offer.store.slice(0,2).toUpperCase()}</div>}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{offer.title}</div>
+            <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600, marginTop: 2 }}>{offer.store} · {offer.joinedCount}/{offer.neededCount} joined</div>
+          </div>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <button onClick={() => setMenuOpen(true)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, color: isMuted ? '#6B7280' : '#9CA3AF' }}>
+              {isMuted ? <span className="bell-with-stripe"><Icon name="bell" size={22} color="#6B7280" /></span> : <Icon name="more-vertical" size={22} color="#9CA3AF" />}
+            </button>
+            {menuOpen && (
+              <div ref={menuRef} style={{ position: 'absolute', top: 40, right: 0, width: 220, background: 'rgba(255,255,255,0.98)', border: '1.5px solid #E5E9EF', borderRadius: 16, padding: 8, boxShadow: '0 12px 30px rgba(0,0,0,0.12)', zIndex: 50 }}>
+                <button onClick={() => { setMenuOpen(false); toggleMuteOffer(id); }} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'transparent', border: 'none', cursor: 'pointer', padding: '10px 10px', borderRadius: 12, fontSize: 13, fontWeight: 800, color: '#374151' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon name="bell" size={16} color={isMuted ? '#6B7280' : '#0071E3'} />{isMuted ? 'Unmute' : 'Mute'}</span>
+                  <span style={{ fontSize: 12, fontWeight: 900, color: isMuted ? '#6B7280' : '#0071E3' }}>{isMuted ? 'On' : 'Off'}</span>
+                </button>
+                <div style={{ height: 1, background: '#E5E9EF', margin: '6px 6px' }} />
+                <button onClick={handleLeave} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, background: 'transparent', border: 'none', cursor: 'pointer', padding: '10px 10px', borderRadius: 12, fontSize: 13, fontWeight: 900, color: '#ef4444' }}>
+                  <Icon name="log-out" size={16} color="#ef4444" /> Leave group
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+        <div style={{ padding: '8px 16px', background: 'rgba(249,250,251,0.8)', borderTop: '1px solid #E5E9EF', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Badge variant={isCompleted ? 'completed' : isReady ? 'ready' : 'waiting'}>{offer.status.toUpperCase()}</Badge>
+            {!isReady && !isCompleted && <span style={{ fontSize: 12, fontWeight: 700, color: '#0071E3' }}>{pct}% Complete</span>}
+          </div>
+          {isReady && !isCompleted && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              {isCreator && (
+                <button onClick={() => store.uploadReceipt(id)} style={{ background: '#0071E3', color: '#fff', border: 'none', borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="receipt" size={13} color="#fff" /> Verify
+                </button>
+              )}
+              <button onClick={handleComplete} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="check-circle-2" size={13} color="#fff" /> Mark Done
+              </button>
+            </div>
+          )}
+          {(isReady || isCompleted) && (
+            <button onClick={() => setShowQr(true)} style={{ background: '#fff', color: '#374151', border: '1px solid #E5E9EF', borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
+              <Icon name="qr-code" size={13} color="#374151" /> QR
+            </button>
+          )}
+        </div>
+      </header>
+
+      <main style={{ flex: 1, overflowY: 'auto', padding: '16px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+          <div style={{ background: '#fff', border: '1px solid #E5E9EF', borderRadius: 16, padding: '10px 18px', textAlign: 'center', maxWidth: '85%', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 3 }}>Group Deal Started</div>
+            <div style={{ fontWeight: 800, fontSize: 14, color: '#111827' }}>{offer.title} at {offer.store}</div>
+            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 3 }}>${offer.pricePerPerson}/person · {offer.distance}km away</div>
+          </div>
+        </div>
+
+        {msgs.map(msg => {
+          const isMe = msg.role === 'me';
+          const isSystem = msg.role === 'system';
+          if (isSystem) return (
+            <div key={msg.id} style={{ display: 'flex', justifyContent: 'center' }}>
+              <span className="chat-bubble-system" style={{ padding: '4px 10px' }}>{msg.text}</span>
+            </div>
+          );
+          return (
+            <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, maxWidth: '85%', flexDirection: isMe ? 'row-reverse' : 'row' }}>
+                {!isMe && <Avatar label={msg.from} size={24} />}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                  {!isMe && <span style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginLeft: 2 }}>{msg.from}</span>}
+                  <div className={isMe ? 'chat-bubble-me' : 'chat-bubble-other'} style={{ padding: '10px 14px', fontSize: 14, maxWidth: 280 }}>{msg.text}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <div ref={bottomRef} />
+      </main>
+
+      {isReady && !isCompleted && (
+        <div style={{ padding: '6px 14px 2px', flexShrink: 0, background: 'rgba(242,245,248,0.95)' }}>
+          <div className="scrollbar-none" style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+            {['Share Location', 'Invite Link'].map(a => (
+              <button key={a} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 999, background: '#F3F4F6', border: '1px solid #E5E9EF', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: '#374151', whiteSpace: 'nowrap' }}>{a}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <footer style={{ padding: '10px 12px 12px', background: 'rgba(242,245,248,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderTop: '1px solid #E5E9EF', flexShrink: 0 }}>
+        {isCompleted ? (
+          <div style={{ background: '#F3F4F6', borderRadius: 16, padding: '12px', textAlign: 'center', border: '1px solid #E5E9EF' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <Icon name="shield-check" size={16} color="#9CA3AF" /> Deal Completed
+            </span>
+          </div>
+        ) : (
+          <form onSubmit={handleSend} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input value={input} onChange={e => setInput(e.target.value)} placeholder="Type a message..." style={{ flex: 1, height: 48, borderRadius: 999, border: '1.5px solid #E5E9EF', background: '#fff', padding: '0 56px 0 16px', fontSize: 14, fontWeight: 500, outline: 'none', color: '#111827' }} />
+            <button type="submit" style={{ width: 44, height: 44, borderRadius: 999, background: input.trim() ? '#0071E3' : '#E5E9EF', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}>
+              <span aria-hidden="true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {/* Instagram-like paper airplane (inline SVG) */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path
+                    d="M21.5 3.5L10.1 14.9"
+                    stroke={input.trim() ? '#fff' : '#9CA3AF'}
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M21.5 3.5L14.9 21.5L10.7 14.3L3.5 10.1L21.5 3.5Z"
+                    stroke={input.trim() ? '#fff' : '#9CA3AF'}
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </svg>
+              </span>
+            </button>
+          </form>
+        )}
+      </footer>
+    </div>
+  );
+}
+
+
+function MapScreen({ store, navigate }) {
+  const { offers, myPassed, user } = store;
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [mapMessage, setMapMessage] = useState('Finding your location…');
+  const [userCoords, setUserCoords] = useState(null);
+  const [mapReady, setMapReady] = useState(false);
+  
+  const mapNode = useRef(null);
+  const mapRef = useRef(null);
+  const markersRef = useRef([]);
+  const userMarkerRef = useRef(null);
+
+  // Helper: Haversine distance
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  const filtered = React.useMemo(() => {
+    return offers.filter(o => {
+      if (o.status === 'completed' || myPassed.includes(o.id)) return false;
+      if (activeCategory !== 'All' && o.category.toLowerCase() !== activeCategory.toLowerCase()) return false;
+      
+      // If we have user coordinates, calculate actual distance
+      // Otherwise fallback to true (show all) until we have location
+      if (userCoords && o.locationLat && o.locationLng) {
+        const dist = getDistance(userCoords.lat, userCoords.lng, o.locationLat, o.locationLng);
+        return dist <= (user.radiusKm || 5);
+      }
+      
+      // Default: show if no user location yet (to prevent empty map)
+      return true;
+    });
+  }, [offers, myPassed, activeCategory, userCoords, user.radiusKm]);
+
+  const showLocation = useCallback(() => {
+    if (!navigator.geolocation) return setMapMessage('Location not supported.');
+    if (!window.L || !mapRef.current) return;
+    setMapMessage('Finding your location…');
+    navigator.geolocation.getCurrentPosition(({ coords }) => {
+      const { latitude, longitude } = coords;
+      setUserCoords({ lat: latitude, lng: longitude });
+      mapRef.current.setView([latitude, longitude], 14);
+      
+      if (userMarkerRef.current) userMarkerRef.current.remove();
+      
+      const userIcon = window.L.divIcon({
+        className: 'user-location-marker',
+        html: `<div style="width:22px;height:22px;background:#10b981;border:3px solid #fff;border-radius:999px;box-shadow:0 0 12px rgba(16,185,129,0.5);position:relative;">
+                <div style="position:absolute;inset:-8px;border-radius:999px;background:rgba(16,185,129,0.25);animation:pulse 2s infinite;"></div>
+              </div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      });
+
+      userMarkerRef.current = window.L.marker([latitude, longitude], { icon: userIcon }).addTo(mapRef.current).bindPopup('You are here');
+      setMapMessage('Showing deals near you');
+    }, () => {
+      setMapMessage('Location access denied.');
+      mapRef.current.setView([37.7749, -122.4194], 13);
+    }, { enableHighAccuracy: true });
+  }, []);
+
+  const resetView = useCallback(() => {
+    if (mapRef.current) mapRef.current.setView([37.7749, -122.4194], 13);
+  }, []);
+
+  useEffect(() => {
+    if (!window.L || mapRef.current) return;
+    const map = window.L.map(mapNode.current, { zoomControl: false }).setView([37.7749, -122.4194], 13);
+    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+    mapRef.current = map;
+    setMapReady(true);
+    showLocation();
+    return () => { if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; } };
+  }, [showLocation]);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !window.L) return;
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = filtered.filter(o => o.locationLat != null).map(o => {
+      const marker = window.L.marker([o.locationLat, o.locationLng]).addTo(mapRef.current);
+      marker.bindPopup(`<b>${o.store}</b><br>${o.title}<br><button onclick="window.location.hash='#/chat/${o.id}'" style="margin-top:8px;background:#0071E3;color:#fff;border:none;padding:4px 12px;border-radius:6px;font-weight:700;cursor:pointer;width:100%">Join</button>`);
+      return marker;
+    });
+  }, [filtered, mapReady]);
+
+  return (
+    <div style={{ height: '100dvh', position: 'relative', overflow: 'hidden' }}>
+      <div ref={mapNode} style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
+      <header style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, padding: '48px 16px 16px', background: 'linear-gradient(to bottom,rgba(255,255,255,0.9),transparent)' }}>
+        <div style={{ position: 'relative', marginBottom: 12 }}>
+          <div style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)' }}>
+            <Icon name="search" size={18} color="#9CA3AF" />
+          </div>
+          <div style={{ width: '100%', minHeight: 52, padding: '15px 48px', borderRadius: 18, background: 'rgba(255,255,255,0.92)', boxShadow: '0 4px 16px rgba(0,0,0,0.08)', fontSize: 13, fontWeight: 600, color: '#374151' }}>{mapMessage}</div>
+        </div>
+        <div className="scrollbar-none" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+          {['All', 'Food', 'Coffee', 'Groceries', 'Electronics'].map(c => (
+            <button key={c} onClick={() => setActiveCategory(c)} className={`category-chip ${activeCategory === c ? 'category-chip-active' : ''}`} style={{ background: activeCategory === c ? '#111827' : 'rgba(255,255,255,0.88)', color: activeCategory === c ? '#fff' : '#374151', backdropFilter: 'blur(10px)', border: '1.5px solid rgba(255,255,255,0.4)', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+              {c}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <div style={{ position: 'absolute', bottom: 120, right: 16, zIndex: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <button className="map-btn" onClick={resetView} title="Reset View"><Icon name="compass" size={22} color="#374151" /></button>
+        <button className="map-btn" onClick={showLocation} title="My Location"><Icon name="navigation" size={22} color="#0071E3" /></button>
+      </div>
+
+      <div style={{ position: 'absolute', bottom: 100, left: 16, right: 80, zIndex: 20 }}>
+        <div style={{ background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(20px)', border: '1.5px solid rgba(255,255,255,0.5)', borderRadius: 24, padding: '14px 18px', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontWeight: 800, fontSize: 16 }}>{filtered.length} Deals Nearby</div>
+          <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 2 }}>Tap a pin to join a group</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function Profile({ store, navigate }) {
+  const { user, offers, myJoined, mySaved, updateUser, logout, estimatedSavings } = store;
+
+  const completedCount = offers.filter(o => o.status === 'completed' && myJoined.includes(o.id)).length;
+  const totalSavings = offers.filter(o => o.status === 'completed').reduce((s, o) => s + o.pricePerPerson, 0);
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({ displayName: user.displayName, interests: user.interests, profileImage: user.profileImage || null });
+  const photoInput = useRef(null);
+  const openEditor = () => { setDraft({ displayName: user.displayName, interests: user.interests, profileImage: user.profileImage || null }); setEditing(true); };
+  const toggleInterest = interest => setDraft(d => ({ ...d, interests: d.interests.includes(interest) ? d.interests.filter(i => i !== interest) : [...d.interests, interest] }));
+  const saveProfile = () => { updateUser({ displayName: draft.displayName.trim() || user.displayName, interests: draft.interests, profileImage: draft.profileImage }); setEditing(false); };
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#F2F5F8' }}>
+      <header className="header-blur" style={{ position: 'sticky', top: 0, zIndex: 50, padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontWeight: 800, fontSize: 20 }}>Profile</span>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button onClick={logout} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Log out">
+            <Icon name="log-out" size={22} color="#ef4444" />
+          </button>
+          <button onClick={openEditor} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}>
+            <Icon name="pencil" size={22} color="#0071E3" />
+          </button>
+        </div>
+      </header>
+
+      <main style={{ padding: '16px 16px 120px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="card" style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 80, background: 'linear-gradient(135deg,rgba(0,113,227,0.15),rgba(16,185,129,0.08))' }} />
+          <div style={{ position: 'relative', marginBottom: 14, marginTop: 20 }}>
+            <div style={{ width: 88, height: 88, borderRadius: 999, background: 'rgba(0,113,227,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 26, color: '#0071E3', border: '4px solid #fff', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+              {user.profileImage ? <img src={user.profileImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : user.displayName.slice(0, 2).toUpperCase()}
+            </div>
+            <div style={{ position: 'absolute', bottom: -2, right: -2, width: 26, height: 26, background: '#22c55e', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+              <Icon name="shield-check" size={13} color="#fff" />
+            </div>
+          </div>
+          <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 4 }}>{user.displayName}</div>
+          <div style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16 }}>
+            <Icon name="map-pin" size={13} color="#9CA3AF" /> {(user.locationEnabled ?? true) ? 'Location Enabled' : 'Location Hidden'}
+          </div>
+          <div style={{ display: 'flex', background: '#F9FAFB', borderRadius: 16, padding: '10px 0', width: '100%', border: '1px solid #E5E9EF' }}>
+            <div style={{ flex: 1, textAlign: 'center', borderRight: '1px solid #E5E9EF' }}>
+              <div style={{ fontWeight: 900, fontSize: 24, color: '#0071E3' }}>{user.trustScore || 4.9}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Trust Score</div>
+            </div>
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ fontWeight: 900, fontSize: 24, color: '#111827' }}>{(user.completedDeals || 0) + completedCount}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Deals Done</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Saved and Saved Deals removed per request */}
+
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div style={{ fontWeight: 800, fontSize: 17 }}>My Interests</div>
+            <button onClick={openEditor} style={{ color: '#0071E3', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>Edit</button>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {(user.interests || []).length > 0 ? (user.interests || []).map((interest, i) => (
+              <span key={i} style={{ padding: '8px 16px', borderRadius: 999, background: '#F3F4F6', fontSize: 13, fontWeight: 700, color: '#374151', border: '1px solid #E5E9EF' }}>{interest}</span>
+            )) : <span style={{ fontSize: 13, color: '#9CA3AF' }}>No interests added yet.</span>}
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>Location Radius</div>
+              <div style={{ fontSize: 13, color: '#9CA3AF', marginTop: 2 }}>Finding deals within {(user.radiusKm || 5)}km</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[1, 3, 5, 10].map(r => (
+                <button key={r} onClick={() => store.updateUser({ radiusKm: r })} style={{ width: 36, height: 36, borderRadius: 999, background: (user.radiusKm || 5) === r ? '#0071E3' : '#F3F4F6', color: (user.radiusKm || 5) === r ? '#fff' : '#374151', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 12 }}>{r}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Professional feature: Quick Stats */}
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 12 }}>Quick Stats</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+              <div style={{ fontWeight: 900, fontSize: 20, color: '#0071E3' }}>{offers.filter(o => myJoined.includes(o.id)).length}</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF' }}>Total Deals</div>
+            </div>
+              <div style={{ background: '#F9FAFB', borderRadius: 12, padding: 12, textAlign: 'center' }}>
+              <div style={{ fontWeight: 900, fontSize: 20, color: '#15803d' }}>
+                {user.myPools?.length || 0}
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF' }}>Pool Joins</div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {editing && <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(17,24,39,.48)', display: 'flex', alignItems: 'flex-end' }}>
+        <div style={{ width: '100%', maxHeight: '88dvh', overflowY: 'auto', background: '#F9FAFB', borderRadius: '24px 24px 0 0', padding: '22px 16px 32px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18 }}>
+            <strong style={{ fontSize: 20 }}>Edit profile</strong>
+            <button onClick={() => setEditing(false)} style={{ border: 0, background: 'none', fontSize: 24, cursor: 'pointer' }}>×</button>
+          </div>
+          <input ref={photoInput} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
+            const file = e.target.files?.[0];
+            if (file) { const reader = new FileReader(); reader.onload = () => setDraft(d => ({ ...d, profileImage: reader.result })); reader.readAsDataURL(file); }
+          }} />
+          <button onClick={() => photoInput.current?.click()} style={{ width: '100%', border: '1.5px dashed #0071E3', background: '#fff', borderRadius: 16, padding: 14, marginBottom: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Icon name="camera" size={20} color="#0071E3" />
+            <span style={{ fontWeight: 700 }}>Choose profile photo from gallery</span>
+          </button>
+          <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#6B7280', marginBottom: 6 }}>USERNAME</label>
+          <input value={draft.displayName} onChange={e => setDraft(d => ({ ...d, displayName: e.target.value }))} style={{ width: '100%', height: 48, borderRadius: 12, border: '1px solid #E5E9EF', padding: '0 12px', fontSize: 16, marginBottom: 18 }} />
+          <div style={{ fontWeight: 800, marginBottom: 8 }}>Interests ({draft.interests.length})</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 22 }}>
+            {ALL_INTERESTS.map(interest => (
+              <button key={interest} onClick={() => toggleInterest(interest)} className={`interest-chip ${draft.interests.includes(interest) ? 'interest-chip-active' : 'interest-chip-inactive'}`}>{interest}</button>
+            ))}
+          </div>
+          <button className="btn-primary" onClick={saveProfile} style={{ width: '100%', height: 52, fontSize: 16 }}>Save changes</button>
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+
+function Notifications({ store, navigate }) {
+  const { notifications, markNotificationRead } = store;
+
+  const getIcon = (kind) => {
+    if (kind === 'join') return { name: 'users', color: '#3b82f6' };
+    if (kind === 'done') return { name: 'check-circle-2', color: '#22c55e' };
+    if (kind === 'system') return { name: 'shield-alert', color: '#8b5cf6' };
+    return { name: 'bell', color: '#0071E3' };
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#F2F5F8' }}>
+      <header className="header-blur" style={{ position: 'sticky', top: 0, zIndex: 50, padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button onClick={() => navigate('/')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 999 }}>
+          <Icon name="arrow-left" size={24} color="#374151" />
+        </button>
+        <span style={{ fontWeight: 800, fontSize: 20 }}>Notifications</span>
+        <div style={{ width: 28 }} />
+      </header>
+
+      <main style={{ padding: '12px 16px 120px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {notifications.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 16px', textAlign: 'center' }}>
+            <div style={{ width: 80, height: 80, background: '#fff', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, border: '1.5px solid #E5E9EF' }}>
+              <Icon name="bell" size={36} color="#D1D5DB" />
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>All caught up!</div>
+            <div style={{ color: '#6B7280', maxWidth: 240 }}>You don't have any new notifications right now.</div>
+          </div>
+        ) : notifications.map(notif => {
+          const icon = getIcon(notif.kind);
+          return (
+            <button key={notif.id} onClick={() => { markNotificationRead(notif.id); if (notif.offerId) navigate(`/chat/${notif.offerId}`); }} className={notif.read ? 'notif-read' : 'notif-unread'} style={{ display: 'flex', gap: 12, padding: '14px 14px', borderRadius: 18, cursor: 'pointer', width: '100%', textAlign: 'left', border: 'none', transition: 'all 0.15s', background: notif.read ? 'rgba(255,255,255,0.4)' : '#fff', borderTop: notif.read ? '1px solid rgba(0,0,0,0.04)' : '1.5px solid rgba(0,113,227,0.12)' }}>
+              <div style={{ width: 48, height: 48, borderRadius: 999, background: notif.read ? '#F3F4F6' : 'rgba(0,113,227,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name={icon.name} size={20} color={notif.read ? '#D1D5DB' : icon.color} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 3 }}>
+                  <div style={{ fontWeight: notif.read ? 600 : 800, fontSize: 14, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>{notif.title}</div>
+                  {!notif.read && <div style={{ width: 7, height: 7, borderRadius: 999, background: '#0071E3', flexShrink: 0, marginTop: 4 }} />}
+                </div>
+                <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.45, marginBottom: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{notif.text}</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#C4C9D4', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{timeAgo(notif.createdAt)}</div>
+              </div>
+            </button>
+          );
+        })}
+      </main>
+    </div>
+  );
+}
+
+
+function SavedOffers({ store, navigate }) {
+  const { offers, mySaved, myJoined, unsaveOffer, joinOffer, passOffer, estimatedSavings } = store;
+  const saved = offers.filter(o => mySaved.includes(o.id));
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#F2F5F8' }}>
+      <header className="header-blur" style={{ position: 'sticky', top: 0, zIndex: 50, padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button onClick={() => navigate('/profile')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 4 }}>
+          <Icon name="arrow-left" size={24} color="#374151" />
+        </button>
+        <span style={{ fontWeight: 800, fontSize: 20 }}>Saved Deals</span>
+        <div style={{ width: 28 }} />
+      </header>
+
+      <main style={{ padding: '16px 16px 120px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {saved.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 16px', textAlign: 'center' }}>
+            <div style={{ width: 80, height: 80, background: '#fff', borderRadius: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, border: '1.5px solid #E5E9EF' }}>
+              <Icon name="search" size={36} color="#D1D5DB" />
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>No saved deals</div>
+            <div style={{ color: '#6B7280', marginBottom: 24, maxWidth: 240 }}>Keep track of deals you like by saving them to your list.</div>
+            <button className="btn-primary" style={{ padding: '12px 32px', fontSize: 15 }} onClick={() => navigate('/')}>Browse Deals</button>
+          </div>
+        ) : saved.map((offer, idx) => (
+          <div key={offer.id} style={{ position: 'relative' }}>
+            <OfferCard
+              offer={{ ...offer, saved: true }}
+              isJoined={myJoined.includes(offer.id)}
+              savings={estimatedSavings(offer)}
+              style={{ animationDelay: `${idx * 60}ms` }}
+              onJoin={() => joinOffer(offer.id)}
+              onPass={() => passOffer(offer.id)}
+              onChatClick={() => navigate(`/chat/${offer.id}`)}
+            />
+            <button onClick={() => unsaveOffer(offer.id)} style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(255,255,255,0.92)', border: 'none', borderRadius: 999, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', color: '#ef4444', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', backdropFilter: 'blur(8px)', zIndex: 5 }}>
+              Unsave
+            </button>
+          </div>
+        ))}
+      </main>
+    </div>
+  );
+}
+
+
+const ALL_INTERESTS = ['Coffee', 'Tea', 'Groceries', 'Dining Out', 'Fast Food', 'Baking', 'Electronics', 'Gaming', 'Phones', 'Computers', 'Beauty', 'Skincare', 'Makeup', 'Clothing', 'Shoes', 'Jewelry', 'Fitness', 'Yoga', 'Running', 'Cycling', 'Home Goods', 'Furniture', 'Decor', 'DIY', 'Books', 'Music', 'Movies', 'Streaming', 'Travel', 'Hotels', 'Flights', 'Cars', 'Pets', 'Baby', 'Kids', 'Art', 'Photography', 'Gardening', 'Outdoors', 'Camping', 'Sports', 'Health', 'Wellness', 'Subscriptions', 'Education', 'Local Events', 'Sustainable Living', 'Crafts'];
+
+
+function Onboarding({ store, navigate }) {
+  const { updateUser } = store;
+  const [selected, setSelected] = useState([]);
+  const [locationEnabled, setLocationEnabled] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const toggle = (i) => setSelected(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]);
+
+  const handleStart = () => {
+    setLoading(true);
+    updateUser({ interests: selected, locationEnabled });
+    setTimeout(() => navigate('/'), 500);
+  };
+
+  return (
+    <div style={{ minHeight: '100dvh', background: '#F2F5F8', display: 'flex', flexDirection: 'column' }}>
+      <main style={{ flex: 1, padding: '48px 24px 24px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ width: 64, height: 64, background: '#0071E3', borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, transform: 'rotate(12deg)', boxShadow: '0 8px 24px rgba(0,113,227,0.35)' }}>
+            <span style={{ fontWeight: 900, fontSize: 28, color: '#fff', transform: 'rotate(-12deg)', display: 'block' }}>S</span>
+          </div>
+          <h1 style={{ fontWeight: 900, fontSize: 36, lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 12, color: '#111827' }}>Welcome to SplitDeal.</h1>
+          <p style={{ fontSize: 16, color: '#6B7280', fontWeight: 500, lineHeight: 1.6, marginBottom: 36 }}>Team up with locals to unlock group discounts on things you buy everyday.</p>
+
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 14 }}>What do you buy most?</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+              {ALL_INTERESTS.map(i => (
+                <button key={i} onClick={() => toggle(i)} className={`interest-chip ${selected.includes(i) ? 'interest-chip-active' : 'interest-chip-inactive'}`}>
+                  {i}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 999, background: 'rgba(0,113,227,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="map-pin" size={20} color="#0071E3" />
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Find Local Deals</div>
+                <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 1 }}>Use location to find nearby groups</div>
+              </div>
+            </div>
+            <button onClick={() => setLocationEnabled(v => !v)} style={{ width: 48, height: 28, borderRadius: 999, background: locationEnabled ? '#0071E3' : '#E5E9EF', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+              <div style={{ width: 22, height: 22, borderRadius: 999, background: '#fff', position: 'absolute', top: 3, left: locationEnabled ? 23 : 3, transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }} />
+            </button>
+          </div>
+        </div>
+
+        <div style={{ paddingTop: 24 }}>
+          <button className="btn-primary" style={{ width: '100%', height: 56, fontSize: 17, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 6px 20px rgba(0,113,227,0.32)' }} onClick={handleStart} disabled={loading}>
+            {loading ? 'Loading...' : 'Start Saving'}
+            {!loading && <Icon name="arrow-right" size={18} color="#fff" />}
+          </button>
+          <div style={{ textAlign: 'center', fontSize: 11, color: '#9CA3AF', fontWeight: 600, marginTop: 12 }}>By continuing, you agree to our Terms & Privacy Policy</div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+
+function App() {
+  const { path, navigate } = useRouter();
+  const store = useStore();
+
+  const getPage = () => {
+    if (path === '/') return <Home store={store} navigate={navigate} />;
+    if (path === '/create') return <CreateOffer store={store} navigate={navigate} />;
+    if (path === '/matches') return <Matches store={store} navigate={navigate} />;
+    if (path === '/map') return <MapScreen store={store} navigate={navigate} />;
+    if (path === '/profile') return <Profile store={store} navigate={navigate} />;
+    if (path === '/notifications') return <Notifications store={store} navigate={navigate} />;
+    if (path === '/saved') return <SavedOffers store={store} navigate={navigate} />;
+    if (path === '/onboarding') return <Onboarding store={store} navigate={navigate} />;
+    if (path.startsWith('/chat/')) {
+      const offerId = path.replace('/chat/', '');
+      return <Chat offerId={offerId} store={store} navigate={navigate} />;
+    }
+    return <Home store={store} navigate={navigate} />;
+  };
+
+  return (
+    <div style={{ maxWidth: 430, margin: '0 auto', minHeight: '100vh', position: 'relative', background: '#F2F5F8', borderLeft: '1px solid #E5E9EF', borderRight: '1px solid #E5E9EF', boxShadow: '0 0 40px rgba(0,0,0,0.06)' }}>
+      {getPage()}
+      <BottomNav path={path} navigate={navigate} unreadCount={store.unreadCount} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

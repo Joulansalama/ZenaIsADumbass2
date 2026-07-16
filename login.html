@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>SplitDeal - Login/Signup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Outfit', sans-serif; background: #F2F5F8; color: #111827; -webkit-font-smoothing: antialiased; }
+  .btn-primary { background: #0071E3; color: #fff; border-radius: 0.875rem; font-weight: 700; transition: all 0.15s; }
+  .btn-primary:hover { background: #0059b3; }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-outline { background: #fff; color: #374151; border: 1.5px solid #E5E9EF; border-radius: 0.875rem; font-weight: 700; transition: all 0.15s; }
+  .btn-outline:hover { background: #F9FAFB; }
+  .btn-outline:active { transform: scale(0.97); }
+  .input-field { width: 100%; height: 52px; padding: 0 16px; border-radius: 0.75rem; border: 1.5px solid #E5E9EF; background: #fff; font-size: 16px; font-weight: 500; outline: none; color: #111827; transition: border-color 0.15s; }
+  .input-field:focus { border-color: #0071E3; }
+  .animate-slide-in { animation: slideIn 0.4s ease-out forwards; }
+  .animate-slide-out { animation: slideOut 0.4s ease-out forwards; }
+  .animate-slide-in-reverse { animation: slideInReverse 0.4s ease-out forwards; }
+  .animate-slide-out-reverse { animation: slideOutReverse 0.4s ease-out forwards; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes slideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(-100%); } }
+  @keyframes slideInReverse { from { opacity: 0; transform: translateX(-100%); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes slideOutReverse { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(100%); } }
+  .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const Icon = ({ name, size = 20, color, className = '', strokeWidth = 2 }) => {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (ref.current && window.lucide) {
+      ref.current.innerHTML = '';
+      const el = document.createElement('i');
+      el.setAttribute('data-lucide', name);
+      ref.current.appendChild(el);
+      lucide.createIcons({ nodes: [ref.current] });
+      const svg = ref.current.querySelector('svg');
+      if (svg) {
+        svg.setAttribute('width', size);
+        svg.setAttribute('height', size);
+        svg.setAttribute('stroke-width', strokeWidth);
+        if (color) svg.setAttribute('stroke', color);
+        svg.style.display = 'block';
+      }
+    }
+  }, [name, size, color, strokeWidth]);
+  return <span ref={ref} className={`inline-flex items-center justify-center ${className}`} />;
+};
+
+// Utility to calculate age
+const calculateAge = (dob) => {
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+};
+
+// ─── Backend: Auth Service (localStorage) ────────────────────────────────────────
+
+const AuthService = {
+  getUsers: () => {
+    const users = localStorage.getItem('sd_users');
+    return users ? JSON.parse(users) : [];
+  },
+  setUsers: (users) => {
+    localStorage.setItem('sd_users', JSON.stringify(users));
+  },
+  getCurrentUser: () => {
+    const currentUser = localStorage.getItem('sd_currentUser');
+    return currentUser ? JSON.parse(currentUser) : null;
+  },
+  setCurrentUser: (user) => {
+    localStorage.setItem('sd_currentUser', JSON.stringify(user));
+  },
+  isUsernameTaken: (username) => {
+    const users = AuthService.getUsers();
+    return users.some(user => user.username.toLowerCase() === username.toLowerCase());
+  },
+  // Signup: checks unique username, saves user with email, logs them in
+  signup: (userData) => {
+    let users = AuthService.getUsers();
+    if (AuthService.isUsernameTaken(userData.username)) {
+      return { success: false, message: 'Username already taken. Please choose another.' };
+    }
+    // Also check email uniqueness
+    const emailTaken = users.some(user => user.email && user.email.toLowerCase() === userData.email.toLowerCase());
+    if (emailTaken) {
+      return { success: false, message: 'An account with this email already exists.' };
+    }
+    users.push(userData);
+    AuthService.setUsers(users);
+    AuthService.setCurrentUser(userData);
+    return { success: true };
+  },
+  // Login: always works if username + password match stored credentials
+  login: (username, password) => {
+    const users = AuthService.getUsers();
+    const user = users.find(u =>
+      u.username.toLowerCase() === username.toLowerCase() && u.password === password
+    );
+    if (user) {
+      AuthService.setCurrentUser(user);
+      return { success: true };
+    }
+    return { success: false, message: 'Invalid username or password.' };
+  },
+  isLoggedIn: () => {
+    return !!AuthService.getCurrentUser();
+  },
+  logout: () => {
+    localStorage.removeItem('sd_currentUser');
+  },
+  // Check if an email is associated with an existing account
+  emailExists: (email) => {
+    const users = AuthService.getUsers();
+    return users.some(user => user.email && user.email.toLowerCase() === email.toLowerCase());
+  },
+  // Find username(s) associated with an email
+  findUsersByEmail: (email) => {
+    const users = AuthService.getUsers();
+    return users.filter(user => user.email && user.email.toLowerCase() === email.toLowerCase());
+  }
+};
+
+// ─── Login Page ──────────────────────────────────────────────────────────────────
+// Flow: Step 1 = Email + CAPTCHA  →  Step 2 = Username + Password
+
+function LoginPage({ onLoginSuccess, onNavigateToSignup }) {
+  const [loginStep, setLoginStep] = useState(1);
+  const [email, setEmail] = useState('');
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  // Generate a random math captcha (e.g. "What is 7 + 3?")
+  const [captcha, setCaptcha] = useState(() => {
+    const a = Math.floor(Math.random() * 10) + 1;
+    const b = Math.floor(Math.random() * 10) + 1;
+    return { text: `What is ${a} + ${b}?`, answer: a + b };
+  });
+
+  const regenerateCaptcha = () => {
+    const a = Math.floor(Math.random() * 10) + 1;
+    const b = Math.floor(Math.random() * 10) + 1;
+    setCaptcha({ text: `What is ${a} + ${b}?`, answer: a + b });
+    setCaptchaAnswer('');
+    setError('');
+  };
+
+  const handleEmailNext = (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email) {
+      setError('Please enter your email.');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    if (!captchaAnswer) {
+      setError('Please solve the CAPTCHA.');
+      return;
+    }
+
+    // Check CAPTCHA answer (accepts both number and string match)
+    if (parseInt(captchaAnswer) !== captcha.answer) {
+      setError('CAPTCHA answer is incorrect. Please try again.');
+      setCaptchaAnswer('');
+      return;
+    }
+
+    // CAPTCHA passed — move to username/password step
+    setLoginStep(2);
+  };
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!username || !password) {
+      setError('Please fill in both username and password.');
+      return;
+    }
+
+    const result = AuthService.login(username, password);
+    if (result.success) {
+      onLoginSuccess();
+    } else {
+      setError(result.message);
+    }
+  };
+
+  const handleBackToEmail = () => {
+    setError('');
+    setLoginStep(1);
+    regenerateCaptcha();
+  };
+
+  // Render login step 1: Email + CAPTCHA
+  if (loginStep === 1) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 animate-fade-in">
+        <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-lg border border-gray-200">
+          <h1 className="text-3xl font-black text-center mb-2">Welcome Back!</h1>
+          <p className="text-center text-gray-500 mb-8">Enter your email and solve the captcha to continue.</p>
+
+          {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm text-center">{error}</div>}
+
+          <form onSubmit={handleEmailNext} className="space-y-5">
+            <div>
+              <label htmlFor="login-email" className="block text-sm font-bold text-gray-700 mb-2">Email</label>
+              <input
+                type="email"
+                id="login-email"
+                className="input-field"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* CAPTCHA */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">CAPTCHA</label>
+              <div className="bg-gray-100 rounded-xl p-4 mb-4 flex items-center justify-between">
+                <span className="text-lg font-bold text-gray-800">{captcha.text}</span>
+                <button
+                  type="button"
+                  onClick={regenerateCaptcha}
+                  className="text-gray-400 hover:text-gray-600 transition"
+                  title="Refresh captcha"
+                >
+                  <Icon name="refresh-cw" size={18} />
+                </button>
+              </div>
+              <input
+                type="number"
+                className="input-field"
+                placeholder="Your answer"
+                value={captchaAnswer}
+                onChange={(e) => setCaptchaAnswer(e.target.value)}
+                required
+              />
+            </div>
+
+            <button type="submit" className="btn-primary w-full h-12 text-lg">Continue</button>
+          </form>
+
+          <p className="text-center text-sm text-gray-500 mt-6">
+            Don't have an account?{' '}
+            <button onClick={onNavigateToSignup} className="text-blue-600 font-bold hover:underline">Sign Up</button>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render login step 2: Username + Password
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 animate-fade-in">
+      <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-lg border border-gray-200">
+        <button
+          onClick={handleBackToEmail}
+          className="flex items-center text-gray-400 hover:text-gray-600 mb-4 text-sm font-semibold transition"
+        >
+          <Icon name="arrow-left" size={16} className="mr-1" /> Back
+        </button>
+        <h1 className="text-3xl font-black text-center mb-2">Sign In</h1>
+        <p className="text-center text-gray-500 mb-8">Enter your credentials to access your account.</p>
+
+        {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm text-center">{error}</div>}
+
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div>
+            <label htmlFor="username" className="block text-sm font-bold text-gray-700 mb-2">Username</label>
+            <input
+              type="text"
+              id="username"
+              className="input-field"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="block text-sm font-bold text-gray-700 mb-2">Password</label>
+            <input
+              type="password"
+              id="password"
+              className="input-field"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <button type="submit" className="btn-primary w-full h-12 text-lg">Login</button>
+        </form>
+
+        <p className="text-center text-sm text-gray-500 mt-6">
+          Don't have an account?{' '}
+          <button onClick={onNavigateToSignup} className="text-blue-600 font-bold hover:underline">Sign Up</button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Signup Page ─────────────────────────────────────────────────────────────────
+// Flow: Step 1 = Name  →  Step 2 = DOB  →  Step 3 = Email  →  Step 4 = Username/Password  →  Step 5 = PFP
+
+function SignupPage({ onSignupSuccess, onNavigateToLogin }) {
+  const [step, setStep] = useState(1);
+  const [fullName, setFullName] = useState('');
+  const [dob, setDob] = useState('');
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pfp, setPfp] = useState(null);
+  const [error, setError] = useState('');
+  const [animationClass, setAnimationClass] = useState('animate-fade-in');
+
+  const handleNext = () => {
+    setError('');
+    let currentError = '';
+
+    if (step === 1) {
+      if (!fullName) currentError = 'Please enter your full name.';
+    } else if (step === 2) {
+      if (!dob) {
+        currentError = 'Please enter your date of birth.';
+      } else {
+        const age = calculateAge(dob);
+        if (age < 18) currentError = 'You must be at least 18 years old to sign up.';
+      }
+    } else if (step === 3) {
+      if (!email) {
+        currentError = 'Please enter your email.';
+      } else {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          currentError = 'Please enter a valid email address.';
+        } else if (AuthService.emailExists(email)) {
+          currentError = 'An account with this email already exists.';
+        }
+      }
+    } else if (step === 4) {
+      if (!username || !password || !confirmPassword) {
+        currentError = 'Please fill in all fields.';
+      } else if (password !== confirmPassword) {
+        currentError = 'Passwords do not match.';
+      } else if (password.length < 6) {
+        currentError = 'Password must be at least 6 characters long.';
+      } else if (AuthService.isUsernameTaken(username)) {
+        currentError = 'Username already taken. Please choose another.';
+      }
+    }
+
+    if (currentError) {
+      setError(currentError);
+      return;
+    }
+
+    setAnimationClass('animate-slide-out');
+    setTimeout(() => {
+      setStep(prev => prev + 1);
+      setAnimationClass('animate-slide-in');
+    }, 300);
+  };
+
+  const handlePrev = () => {
+    setError('');
+    setAnimationClass('animate-slide-out-reverse');
+    setTimeout(() => {
+      setStep(prev => prev - 1);
+      setAnimationClass('animate-slide-in-reverse');
+    }, 300);
+  };
+
+  const handleSignup = () => {
+    setError('');
+    if (!username || !password || !email) {
+      setError('Please complete all required steps.');
+      return;
+    }
+    const result = AuthService.signup({ fullName, dob, email, username, password, pfp });
+    if (result.success) {
+      onSignupSuccess();
+    } else {
+      setError(result.message);
+    }
+  };
+
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return (
+          <div className={`w-full max-w-md bg-white p-8 rounded-3xl shadow-lg border border-gray-200 ${animationClass}`}>
+            <h2 className="text-3xl font-black text-center mb-2">What's your name?</h2>
+            <p className="text-center text-gray-500 mb-8">We'll use this to personalize your experience.</p>
+            {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm text-center">{error}</div>}
+            <input
+              type="text"
+              className="input-field mb-6"
+              placeholder="Full Name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
+            <button onClick={handleNext} className="btn-primary w-full h-12 text-lg">Next</button>
+            <p className="text-center text-sm text-gray-500 mt-6">
+              Already have an account? <button onClick={onNavigateToLogin} className="text-blue-600 font-bold hover:underline">Login</button>
+            </p>
+          </div>
+        );
+      case 2:
+        return (
+          <div className={`w-full max-w-md bg-white p-8 rounded-3xl shadow-lg border border-gray-200 ${animationClass}`}>
+            <h2 className="text-3xl font-black text-center mb-2">When were you born?</h2>
+            <p className="text-center text-gray-500 mb-8">You must be 18 or older to use SplitDeal.</p>
+            {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm text-center">{error}</div>}
+            <input
+              type="date"
+              className="input-field mb-6"
+              value={dob}
+              onChange={(e) => setDob(e.target.value)}
+              required
+            />
+            <div className="flex gap-4">
+              <button onClick={handlePrev} className="btn-outline flex-1 h-12 text-lg">Back</button>
+              <button onClick={handleNext} className="btn-primary flex-1 h-12 text-lg">Next</button>
+            </div>
+          </div>
+        );
+      case 3:
+        return (
+          <div className={`w-full max-w-md bg-white p-8 rounded-3xl shadow-lg border border-gray-200 ${animationClass}`}>
+            <h2 className="text-3xl font-black text-center mb-2">What's your email?</h2>
+            <p className="text-center text-gray-500 mb-8">We'll use this for account recovery and notifications.</p>
+            {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm text-center">{error}</div>}
+            <input
+              type="email"
+              className="input-field mb-6"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <div className="flex gap-4">
+              <button onClick={handlePrev} className="btn-outline flex-1 h-12 text-lg">Back</button>
+              <button onClick={handleNext} className="btn-primary flex-1 h-12 text-lg">Next</button>
+            </div>
+          </div>
+        );
+      case 4:
+        return (
+          <div className={`w-full max-w-md bg-white p-8 rounded-3xl shadow-lg border border-gray-200 ${animationClass}`}>
+            <h2 className="text-3xl font-black text-center mb-2">Create your account</h2>
+            <p className="text-center text-gray-500 mb-8">Choose a unique username and a strong password.</p>
+            {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm text-center">{error}</div>}
+            <div className="space-y-5 mb-6">
+              <input
+                type="text"
+                className="input-field"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                className="input-field"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                className="input-field"
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex gap-4">
+              <button onClick={handlePrev} className="btn-outline flex-1 h-12 text-lg">Back</button>
+              <button onClick={handleNext} className="btn-primary flex-1 h-12 text-lg">Next</button>
+            </div>
+          </div>
+        );
+      case 5:
+        return (
+          <div className={`w-full max-w-md bg-white p-8 rounded-3xl shadow-lg border border-gray-200 ${animationClass}`}>
+            <h2 className="text-3xl font-black text-center mb-2">Pick a Profile Picture</h2>
+            <p className="text-center text-gray-500 mb-8">This step is optional, but helps your neighbors recognize you!</p>
+            {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm text-center">{error}</div>}
+            <div className="flex justify-center mb-6">
+              <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-sm font-bold overflow-hidden">
+                {pfp ? <img src={pfp} alt="Profile" className="w-full h-full object-cover" /> : "Upload PFP"}
+              </div>
+            </div>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              id="pfp-upload"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setPfp(reader.result);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+            />
+            <label htmlFor="pfp-upload" className="btn-outline w-full h-12 text-lg flex items-center justify-center cursor-pointer mb-4">
+              <Icon name="upload" size={20} className="mr-2" /> Choose Photo
+            </label>
+            <div className="flex gap-4">
+              <button onClick={handlePrev} className="btn-outline flex-1 h-12 text-lg">Back</button>
+              <button onClick={handleSignup} className="btn-primary flex-1 h-12 text-lg">Finish Signup</button>
+            </div>
+            <button onClick={handleSignup} className="text-blue-600 font-bold hover:underline text-sm mt-4 block mx-auto">Skip for now</button>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      {renderStep()}
+    </div>
+  );
+}
+
+// ─── App ─────────────────────────────────────────────────────────────────────────
+
+function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(AuthService.isLoggedIn());
+  const [showSignup, setShowSignup] = useState(false);
+
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true);
+    alert("Login successful! Redirecting to main app...");
+    window.location.href = "splitdeal_full_updated.html";
+  };
+
+  const handleSignupSuccess = () => {
+    setIsLoggedIn(true);
+    alert("Signup successful! Redirecting to main app...");
+    window.location.href = "splitdeal_full_updated.html";
+  };
+
+  const handleLogout = () => {
+    AuthService.logout();
+    setIsLoggedIn(false);
+    setShowSignup(false);
+  };
+
+  if (isLoggedIn) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-50">
+        <h1 className="text-3xl font-black mb-4">You are logged in!</h1>
+        <p className="text-gray-600 mb-8">Redirecting to the main SplitDeal app...</p>
+        <button onClick={handleLogout} className="btn-outline h-12 px-6">Logout</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50">
+      {showSignup ? (
+        <SignupPage onSignupSuccess={handleSignupSuccess} onNavigateToLogin={() => setShowSignup(false)} />
+      ) : (
+        <LoginPage onLoginSuccess={handleLoginSuccess} onNavigateToSignup={() => setShowSignup(true)} />
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
